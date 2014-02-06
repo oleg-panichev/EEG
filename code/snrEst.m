@@ -36,8 +36,7 @@ classdef snrEst < handle
       obj.maxF=maxF;
     end
     
-    function [snr,snrF,snrT]=snrEst1d(s,channelIdx,plotFlag)
-      length(s.eeg)
+    function [snr,snrF,snrT]=snrEst1d(obj,s,channelIdx,plotFlag)
       [S,fs]=snrEst.structToSeparateData(s);
       
       if (channelIdx>s.chNum)
@@ -65,8 +64,8 @@ classdef snrEst < handle
         figure
         subplot(511);
         plot(t, S); 
-        title(['EEG signal ', obj.name,', minF = ',num2str(obj.minF), ...
-          ', maxF = ',num2str(obj.maxF)]); 
+%         title(['EEG signal ', s.name,', minF = ',num2str(obj.minF), ...
+%           ', maxF = ',num2str(obj.maxF)]); 
         ylabel('A, uV'); xlabel('t, s'); 
         xlim([t(1) t(end)]); grid on;
         subplot(512);

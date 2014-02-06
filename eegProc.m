@@ -14,7 +14,7 @@ data=loadConf('data.csv');
 % len=max(size(S));
 
 %% Processing parameters:
-idBuf=[1,3,4,5,8,11]; % [1:chNum] % Select signals to process
+idBuf=[1]; % [1:chNum] % Select signals to process
 stype='mat';
 channel=1;
 
@@ -31,16 +31,14 @@ plotFlag=1; % 0 - disable all plot, 1 - enable all plots
 snrEstimator=snrEst(winSz,step,modelM,nOfPresum, ...
         updateModelFl,minF,maxF);
 
-idx=1;
 for i=1:length(idBuf)
   s=loadData(data,idBuf(i),stype);
   
   snrIdx=1+winSz:step:s.len-winSz;
   snrT=snrIdx(nOfPresum:end)./s.fs;
-  snr=zeros(length(idBuf),length(snrT));
+  snr=zeros(1,length(snrT));
   
-  [snr(idx,:),~,~]=snrEstimator.snrEst1d(s,1);
-  idx=idx+1;
+  [snr,~,~]=snrEstimator.snrEst1d(s,1,1);
 end
 
 figure
