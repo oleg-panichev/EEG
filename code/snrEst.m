@@ -27,6 +27,12 @@ classdef snrEst < handle
   methods  (Access='public')
     function obj=snrEst(winSz,step,modelM,nOfPresum, ...
         updateModelFl,minF,maxF)
+      obj.config(winSz,step,modelM,nOfPresum, ...
+        updateModelFl,minF,maxF);
+    end
+    
+    function config(obj,winSz,step,modelM,nOfPresum, ...
+        updateModelFl,minF,maxF)
       obj.winSz=winSz;
       obj.step=step;
       obj.modelM=modelM;
@@ -36,14 +42,12 @@ classdef snrEst < handle
       obj.maxF=maxF;
     end
     
-    function [snr,snrF,snrT]=snrEst1d(obj,s,channelIdx,plotFlag)
-      [S,fs]=snrEst.structToSeparateData(s);
-      
-      if (channelIdx>s.chNum)
-        error(['Wrong channelIdx=',num2str(channelIdx),' while chNum = ',...
+    function [snr,snrF,snrT]=snrEst1d(obj,s,chIdx,plotFlag)
+      if (chIdx>s.chNum)
+        error(['Wrong channelIdx=',num2str(chIdx),' while chNum = ',...
           num2str(s.chNum)]);
       end
-      S=S(channelIdx,:);
+      [S,fs]=s.getSingleChannel(chIdx);
       len = length(S);
       winSzIn=round(obj.winSz*fs);
       stepIn=round(obj.step*fs);
@@ -66,7 +70,8 @@ classdef snrEst < handle
         plot(t, S); 
 %         title(['EEG signal ', s.name,', minF = ',num2str(obj.minF), ...
 %           ', maxF = ',num2str(obj.maxF)]); 
-        ylabel('A, uV'); xlabel('t, s'); 
+        title([s.recordID]);
+        ylabel([s.label(chIdx),', ',s.units(chIdx)]); xlabel('t, s'); 
         xlim([t(1) t(end)]); grid on;
         subplot(512);
       end
@@ -110,7 +115,7 @@ classdef snrEst < handle
         plot(f,mdl,'r','Linewidth',2); xlabel('f, Hz'); ylabel('V^2'); grid on;
 
         subplot(513);
-        plot(snrT,snr,'Linewidth',2); ylabel('SNR, dB'); xlabel('t, s'); xlim([t(1) t(end)]); 
+        plot(snrT,snr,'Linewidth',2); ylabel('SNR, dB'); xlabel('t, s');  
         grid on;
 
         subplot(514);
@@ -119,16 +124,10 @@ classdef snrEst < handle
         xlabel('t, s'); ylabel('f, Hz');
 
         subplot(515);
-        plot(snrT,sum(snrF),'Linewidth',2); grid on;
+        plot(snrT,sum(snrF),'Linewidth',2); 
+        xlabel('t, s'); xlim([t(1) t(end)]); ylabel('sum(A), Hz'); grid on;
       end
     end 
-  end
-  
-  methods (Static)
-    function [eeg,fs]=structToSeparateData(s)
-      eeg=s.eeg;
-      fs=s.fs;
-    end
   end
 end
 

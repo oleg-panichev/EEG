@@ -14,8 +14,8 @@ data=loadConf('data.csv');
 % len=max(size(S));
 
 %% Processing parameters:
-idBuf=[1]; % [1:chNum] % Select signals to process
-stype='mat';
+idBuf=[21]; % [1:chNum] % Select signals to process
+stype='edf';
 channel=1;
 
 winSz=1; % half of window size, s
@@ -29,25 +29,26 @@ avMdlMethod='movAvBuf'; % {'movAvM', 'movAvBuf'};
 plotFlag=1; % 0 - disable all plot, 1 - enable all plots
 
 snrEstimator=snrEst(winSz,step,modelM,nOfPresum, ...
-        updateModelFl,minF,maxF);
-
+                    updateModelFl,minF,maxF);
+      
+chIdx=12;
 for i=1:length(idBuf)
   s=loadData(data,idBuf(i),stype);
   
-  snrIdx=1+winSz:step:s.len-winSz;
-  snrT=snrIdx(nOfPresum:end)./s.fs;
-  snr=zeros(1,length(snrT));
+%   snrIdx=1+winSz:step:s.len-winSz;
+%   snrT=snrIdx(nOfPresum:end)./s.fs;
+%   snr=zeros(1,length(snrT));
   
-  [snr,~,~]=snrEstimator.snrEst1d(s,1,1);
+  [snr,~,~]=snrEstimator.snrEst1d(s,chIdx,plotFlag);
 end
 
-figure
-for i=1:numel(sBufIdx)
-  plot(snrT,snr(i,:)); hold on;
-end
-plot(snrT,sum(snr,1)/numel(sBufIdx),'r','Linewidth',3);
-title(['Average SNR(t) for ', num2str(chNum), ' test streams']);
-xlabel('t, s'); ylabel('SNR, dB'); grid on;
+% figure
+% for i=1:numel(sBufIdx)
+%   plot(snrT,snr(i,:)); hold on;
+% end
+% plot(snrT,sum(snr,1)/numel(sBufIdx),'r','Linewidth',3);
+% title(['Average SNR(t) for ', num2str(chNum), ' test streams']);
+% xlabel('t, s'); ylabel('SNR, dB'); grid on;
 
 
 %% Processing:
