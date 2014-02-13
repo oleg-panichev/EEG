@@ -22,17 +22,20 @@ classdef snrEst < handle
     updateModelFl;
     minF;
     maxF;   
+    minWinSz;
+    winSzStep;
+    maxWinSz;
   end
   
   methods  (Access='public')
     function obj=snrEst(winSz,step,modelM,nOfPresum, ...
-        updateModelFl,minF,maxF)
+        updateModelFl,minF,maxF,minWinSz,winSzStep,maxWinSz)
       obj.config(winSz,step,modelM,nOfPresum, ...
-        updateModelFl,minF,maxF);
+        updateModelFl,minF,maxF,minWinSz,winSzStep,maxWinSz);
     end
     
     function config(obj,winSz,step,modelM,nOfPresum, ...
-        updateModelFl,minF,maxF)
+        updateModelFl,minF,maxF,minWinSz,winSzStep,maxWinSz)
       obj.winSz=winSz;
       obj.step=step;
       obj.modelM=modelM;
@@ -40,11 +43,14 @@ classdef snrEst < handle
       obj.updateModelFl=updateModelFl;
       obj.minF=minF;
       obj.maxF=maxF;
+      obj.minWinSz=minWinSz;
+      obj.winSzStep=winSzStep;
+      obj.maxWinSz=maxWinSz;
     end
     
     function [snr,snrF,snrT]=snrEst1d(obj,s,chIdx,plotFlag)
       if (chIdx>s.chNum)
-        error(['Wrong channelIdx=',num2str(chIdx),' while chNum = ',...
+        error(['Wrong chIdx=',num2str(chIdx),' while chNum = ',...
           num2str(s.chNum)]);
       end
       [S,fs]=s.getSingleChannel(chIdx);
@@ -128,6 +134,111 @@ classdef snrEst < handle
         xlabel('t, s'); xlim([t(1) t(end)]); ylabel('sum(A), Hz'); grid on;
       end
     end 
+    
+    function [snr,sumSnr,snrT] = snrEstWinSzVar(obj,s,chIdx,plotFlag)
+      if (chIdx>s.chNum)
+        error(['Wrong chIdx=',num2str(chIdx),' while chNum = ',...
+          num2str(s.chNum)]);
+      end
+      [S,fs]=s.getSingleChannel(chIdx);
+      len = length(S);
+
+      obj.minWinSz
+      obj.winSzStep
+      obj.maxWinSz
+      winSzBuf=obj.minWinSz*fs:obj.winSzStep*fs:obj.maxWinSz*fs % half of window size
+      winSzLen=length(winSzBuf);
+      snrIdx=1+max(winSzBuf):obj.step:len-max(winSzBuf);
+      snrT=snrIdx(obj.nOfPresum:end)./fs; 
+      numel(winSzBuf)
+      obj.nOfPresum
+      snr=zeros(winSzLen,length(snrT));
+
+      for k=1:winSzLen
+        win=hamming(2*winSzBuf(k)+1); % Using Hamming window before calculation of spectra
+        freqStep=fs/(winSzBuf(k)*2+1);
+        freqLowLimit=ceil(obj.minF/freqStep+1);
+        freqHighLimit=ceil(obj.maxF/freqStep);
+
+        idx=1;
+        j=snrIdx(1);
+        instSpectr=abs(fft(S(j-winSzBuf(k):j+winSzBuf(k)).*win'))./len;
+        mdl=instSpectr(freqLowLimit:freqHighLimit);
+        mdlBuf=zeros(obj.nOfPresum,numel(mdl));
+        mdlBuf(1,:)=mdl;
+
+        for j=snrIdx(2:obj.nOfPresum)
+    %        disp('in2d');
+          instSpectr=abs(fft(S(j-winSzBuf(k):j+winSzBuf(k)).*win'))./len;
+          switch (avMdlMethod)
+              case 'movAvM'
+                mdl=obj.modelM*mdl+(1-obj.modelM)*instSpectr(freqLowLimit:freqHighLimit);
+              case 'movAvBuf'
+                mdlBuf(j,:)=instSpectr(freqLowLimit:freqHighLimit);
+                if (j==obj.nOfPresum)
+                  mdl=sum(mdlBuf)/obj.nOfPresum;  
+                end
+            otherwise
+                mdl=instSpectr(freqLowLimit:freqHighLimit);
+          end     
+        end
+        circMdlIdx=1;
+
+        for j=snrIdx(obj.nOfPresum:end)
+          % Calculating instant spectra of part of signal
+          instSpectr=abs(fft(S(j-winSzBuf(k):j+winSzBuf(k)).*win'))./len;
+          instSpectr=instSpectr(freqLowLimit:freqHighLimit);
+
+          % Calculating noise speactra for current position
+          noiseSpectr=abs(instSpectr-mdl);
+
+          s=sum(mdl);
+          n=sum(noiseSpectr);
+          % Calculating SNR
+          snr(k,idx)=20*log10(s/n);
+
+          % Updating model
+          if (obj.updateModelFl>0)
+            switch (avMdlMethod)
+              case 'movAvM'
+                mdl=obj.modelM*mdl+(1-obj.modelM)*instSpectr;
+              case 'movAvBuf'
+                if(circMdlIdx>obj.nOfPresum)
+                  circMdlIdx=1;
+                end
+                mdlBuf(circMdlIdx,:)=instSpectr;
+                circMdlIdx=circMdlIdx+1;
+                mdl=sum(mdlBuf)/obj.nOfPresum;
+              otherwise
+                mdl=instSpectr;
+            end
+          end
+          idx=idx+1;
+        end
+      end
+
+      if (plotFlag)
+    %     figure
+    %     surf(snrT,2*winSz./fs, snr,'FaceColor','interp'); 
+    %     title(['EEG signal ', sName,', minF = ',num2str(minF),', maxF = ',num2str(maxF)]); 
+    % %     colorbar;
+    %     xlabel('t, s'); ylabel('WIndow size, s'); zlabel('SNR, dB'); grid on;
+
+        figure
+        subplot(211);
+        imagesc(snrT,2*winSzBuf./fs,snr); 
+        xlim([snrT(1) snrT(end)]);
+        title(['EEG signal ', sName,', minF = ',num2str(obj.minF),', maxF = ',num2str(obj.maxF)]); 
+        xlabel('t, s'); ylabel('WIndow size, s');
+        grid on;
+
+        subplot(212);
+        sumSnr=sum(snr);    
+        plot(snrT,sumSnr); xlabel('t, s'); 
+        xlim([snrT(1) snrT(end)]); ylabel('Sum(SNR)'); grid on;
+      end
+    end
+    
   end
 end
 

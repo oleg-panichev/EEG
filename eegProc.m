@@ -14,8 +14,8 @@ data=loadConf('data.csv');
 % len=max(size(S));
 
 %% Processing parameters:
-idBuf=[21]; % [1:chNum] % Select signals to process
-stype='edf';
+idBuf=[1]; % [1:chNum] % Select signals to process
+stype='mat';
 channel=1;
 
 winSz=1; % half of window size, s
@@ -26,12 +26,18 @@ updateModelFl=0; % Flag indicating updating of the modek status (0-off,else-on)
 minF=0; % Min freqency in model, Hz
 maxF=30; % Max freqency in model, Hz
 avMdlMethod='movAvBuf'; % {'movAvM', 'movAvBuf'};
+minWinSz=round(0.5);
+winSzStep=round(0.125);
+maxWinSz=round(2);
+
+
 plotFlag=1; % 0 - disable all plot, 1 - enable all plots
 
 snrEstimator=snrEst(winSz,step,modelM,nOfPresum, ...
-                    updateModelFl,minF,maxF);
+                    updateModelFl,minF,maxF, ...
+                    minWinSz,winSzStep,maxWinSz);
       
-chIdx=12;
+chIdx=1;
 for i=1:length(idBuf)
   s=loadData(data,idBuf(i),stype);
   
@@ -40,6 +46,7 @@ for i=1:length(idBuf)
 %   snr=zeros(1,length(snrT));
   
   [snr,~,~]=snrEstimator.snrEst1d(s,chIdx,plotFlag);
+  [snr,~,~]=snrEstimator.snrEstWinSzVar(s,chIdx,plotFlag);
 end
 
 % figure
@@ -57,9 +64,7 @@ end
 %% 2D SNR
 minF=0; % Min freqency in model, Hz
 maxF=20; % Max freqency in model, Hz
-minWinSz=round(0.5*fs);
-maxWinSz=round(2*fs);
-winSzStep=round(0.125*fs);
+
 
 winSz=minWinSz:winSzStep:maxWinSz; % half of window size
 winSzLen=length(winSz);

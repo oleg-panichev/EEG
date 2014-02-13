@@ -14,7 +14,6 @@ function [s]=loadData(data,id,stype)
       dataFormat=[dataFormat{1}];
       disp(['Loading data from ',filename]);
       [s]=loadFromMat(filename,dataFormat);
-      s.name=data{1,3}(idx);
       disp('Done.');
 
     case 'edf'
@@ -28,7 +27,6 @@ function [s]=loadData(data,id,stype)
       filename=[dir,data{1,5}(idx)];
       disp(['Loading data from ',filename]);
       [s]=loadFromTxt(filename);
-      s.name=data{1,5}(idx);
       disp('Done.');
 
     otherwise
@@ -42,13 +40,28 @@ function [s]=loadFromMat(filename,dataFormat)
   switch (dataFormat)
     case '45s'
       load(filename);
-      s.eeg=A;
-      s.fs=fs;
-      s.len=length(A);
+      s=eegData();
+      s.ver=0;
+      s.patientID=0;                       
+      s.recordID=filename;                                        
+      s.startdate=[];
+      s.starttime=[];
+      s.bytes=[];
+      s.records=[];
+      s.duration=[];
+      s.ns=[];
+      s.label=['eeg'];
+      s.transducer=[];
+      s.units=['uV'];
+      s.physicalMin=[];
+      s.physicalMax=[];
+      s.digitalMin=[];
+      s.digitalMax=[];
+      s.prefilter=[];
+      s.samples=fs;
+      s.record=A;
       s.chNum=1;
-      s.markers=zeros(1,length(A));
-      s.ymarks='uc';
-      
+
     case 'IoN'
       
       
