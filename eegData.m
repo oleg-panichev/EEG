@@ -1,4 +1,4 @@
-% Inner EEG data class
+% Inner EEG data class (similar to EDF)
 %
 classdef eegData < handle 
   properties (SetAccess='public') 
@@ -8,8 +8,8 @@ classdef eegData < handle
     startdate;
     starttime;
     bytes;
-    records;
-    duration;
+    records; % duration of stored signals, s
+    duration; % 
     ns;
     label;
     transducer;
@@ -19,9 +19,12 @@ classdef eegData < handle
     digitalMin;
     digitalMax;
     prefilter;
-    samples;
-    record;
-    chNum;
+    samples; % sample rate for every channel, Hz
+    record; % signals (channel,sample)
+    chNum; % number of channels
+    eegLen; % number of samples in EEG data
+    eegFs; % sample rate of eeg data
+    ann; % seizure annotation
   end
   
   methods  (Access='public')
