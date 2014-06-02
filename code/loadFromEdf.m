@@ -1,7 +1,6 @@
 % Function to load data from edf file and save it to inner data format
 %
-function [s]=loadFromEdf(filename)
-  s=eegData();
+function loadFromEdf(s,filename)
   [hdr, record]=edfread(filename);
   s.ver=hdr.ver;
   s.patientID=hdr.patientID;                       

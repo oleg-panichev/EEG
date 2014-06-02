@@ -28,6 +28,7 @@ classdef eegData < handle
     eegLen; % number of samples in EEG data
     eegFs; % sample rate of eeg data
     annSeizure; % seizure annotation, 0 - no seizure, 1 - seizure
+    seizureTimings; % seizuse start and end times, (numberOfseizures,2)
   end
   
   methods  (Access='public')
@@ -51,7 +52,7 @@ classdef eegData < handle
         'digitalMin',obj.digitalMin,'digitalMax',obj.digitalMax,...
         'prefilter',obj.prefilter,'samples',obj.samples,'record',obj.record,...
         'chNum',obj.chNum,'eegLen',obj.eegLen,'eegFs',obj.eegFs,...
-        'annSeizure',obj.annSeizure);
+        'annSeizure',obj.annSeizure,'seizureTimings',obj.seizureTimings);
     end
   end
 end

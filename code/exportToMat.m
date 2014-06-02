@@ -5,7 +5,7 @@ function exportToMat(fileName,s)
 %   save(fileName,'dataStruct');
   ver=s.ver;
 	patientID=s.patientID;   
-  patientName=s.patientName;
+  patientName=s.patientName; % Patient's name
   patientGender=s.patientGender; % Gender
   patientAge=s.patientAge; % Age in years
   recordID=s.recordID;                                        
@@ -29,6 +29,7 @@ function exportToMat(fileName,s)
   eegLen=s.eegLen; % number of samples in EEG data
   eegFs=s.eegFs; % sample rate of eeg data
   annSeizure=s.annSeizure;
+  seizureTimings=s.seizureTimings;
   save(fileName,'ver','patientID',...
         'patientName','patientGender',...
         'patientAge','recordID',...
@@ -40,6 +41,6 @@ function exportToMat(fileName,s)
         'digitalMin','digitalMax',...
         'prefilter','samples','record',...
         'chNum','eegLen','eegFs',...
-        'annSeizure');
+        'annSeizure','seizureTimings');
   disp(['Data has been successfully saved to ',fileName,'.']);
 end
