@@ -14,7 +14,7 @@ function simplePlot(s)
   grid on;
   
   hs(2)=subplot(2,1,2);
-  plot(sigTime,s.ann,'r','Linewidth',3);
+  plot(sigTime,s.annSeizure,'r','Linewidth',3);
   xlabel('Time, s');
   xlim([sigTime(1) sigTime(end)]);
   ylabel('Seizure status');

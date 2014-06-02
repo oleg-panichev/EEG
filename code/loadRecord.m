@@ -1,11 +1,14 @@
 % Load record from file
 %
-function [s]=loadRecord(fileName)
-  dataType=lower(fileName(end-2:end));
+function [s]=loadRecord(path,fileName,subjectInfoFileName)
+  fullFileName=strcat(path,fileName);
+  fullFileName=[fullFileName{1}];
+  dataType=lower(fullFileName(end-2:end));
   if (strcmp(dataType,'edf'))
-    [s]=loadFromEdf(fileName);
-    
-    loadSeizuresAnnptation(s,fileName);
+    [s]=loadFromEdf(fullFileName);
+      
+    loadPatientInfo(s,path,fileName,subjectInfoFileName);
+    loadSeizuresAnnotation(s,fullFileName);
     disp('Data loading is done.');
   elseif (strcmp(dataType,'mat'))
     
