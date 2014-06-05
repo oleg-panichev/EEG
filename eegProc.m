@@ -48,6 +48,10 @@ for i=sigIdx
   if (~exist(reportPathRecord,'dir'))
     mkdir(reportPathRecord);
   end
+  reportPathRecord=[reportPathRecord,fileName{1}(6:end-4),'/'];
+  if (~exist(reportPathRecord,'dir'))
+    mkdir(reportPathRecord);
+  end
   disp(['Loading data from ',fullFileName]);
   if (exist('oldFileName','var') && forceReloadFl==0)
     if(~strcmp(fileName,oldFileName))
@@ -78,7 +82,7 @@ for i=sigIdx
   end
   
 %   estInformationTransfer(s);
-  estInfTransfer(s);
+  estInfTransfer(s,reportPathRecord);
   % -----------------------------------------------------------------------
   disp('Processing is done!');
 end
