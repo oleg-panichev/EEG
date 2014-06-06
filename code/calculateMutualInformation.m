@@ -1,8 +1,11 @@
 function mi=calculateMutualInformation(s1,s2)
-  if (numel(s1)~=numel(s2))
-    error('Input vectors must be the same length!');
+  n1=numel(s1);
+  n2=numel(s2);
+  if (n1~=n2)
+    error(['Input vectors must be the same length! numel(s1)=', ...
+      num2str(n1),', numel(s2)=',num2str(n2),'.']);
   else
-    N=numel(s1);
+    N=n1;
   end
   
   nbins=max(sturges(s1),sturges(2));

@@ -82,7 +82,9 @@ for i=sigIdx
   end
   
 %   estInformationTransfer(s);
-  estInfTransfer(s,reportPathRecord);
+%   estInfTransfer(s,reportPathRecord);
+  estInfTr=informationAnalysis(s);
+  estInfTr.estInfTransfer(s,path);
   % -----------------------------------------------------------------------
   disp('Processing is done!');
 end
