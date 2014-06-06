@@ -19,7 +19,7 @@ loadPatientInfoFl=1; % Flag to load data about patient
 loadSeizuresAnnotationFl=1; % Flag to load data about seizures
 allPatientsDataAnalysisFl=0; % FLag to perform analysis for all patients
 
-sigIdx=[1]; % File index to load
+sigIdx=[2:4]; % File index to load
 
 if (~exist(reportPath,'dir'))
   mkdir(reportPath);
@@ -84,7 +84,8 @@ for i=sigIdx
 %   estInformationTransfer(s);
 %   estInfTransfer(s,reportPathRecord);
   estInfTr=informationAnalysis(s);
-  estInfTr.estInfTransfer(s,path);
+%   estInfTr.estMutualInfTimeDomain(s,reportPathRecord);
+  estInfTr.estMiAllPairs(s,reportPathRecord);
   % -----------------------------------------------------------------------
   disp('Processing is done!');
 end
