@@ -1,4 +1,7 @@
-function mi=calculateMutualInformation(s1,s2)
+% Function for calculation of mutual information between two signals s1 and 
+% s2.
+%
+function mi=muinfo(s1,s2)
   n1=numel(s1);
   n2=numel(s2);
   if (n1~=n2)
@@ -23,4 +26,4 @@ function mi=calculateMutualInformation(s1,s2)
       end
     end
   end
-end
+end 

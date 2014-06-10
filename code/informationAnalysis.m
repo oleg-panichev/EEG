@@ -1,11 +1,11 @@
-% Function for mutual information estimation
+% Class for information flow analysis in EEG signals.
 %
 classdef informationAnalysis < handle
   properties (SetAccess='private') 
     skipSecondsStart=2900; % Number of seconds to skip from the begining
     skipSecondsEnd=200; % Number of seconds to use after skipSecondsStart
     miFs=1; % Sample rate of mutual information
-    chNum=0; % Number of first N channels to analize, 0 - to use all channels
+    chNum=4; % Number of first N channels to analize, 0 - to use all channels
     winSize; % Size of window to analyze signal
     
     idxEnd;
@@ -20,6 +20,7 @@ classdef informationAnalysis < handle
   end
   
   methods  (Access='public')
+    % Constructor
     function obj=informationAnalysis(s)
       obj.winSize=2*s.eegFs; % Size of window to analyze signal
       % Check parameters
@@ -54,8 +55,12 @@ classdef informationAnalysis < handle
       obj.miChBuf=zeros(obj.miChNum,4);
     end
     
-    function estMutualInfTimeDomain(obj,s,path)    
+    % Function for estimation MI(t) in predefined window for all channels
+    % combinations.
+    function [miChBuf,miCellBuf]=estMutualInfTimeDomain(obj,s,path,verbose)    
       chIdx=1;  
+      [nOfSeizures,~]=size(s.seizureTimings);
+      miCellBuf=cell(obj.miChNum,2);
 
       % Calculate MI for all channels
       disp('Calculating mutual information...');
@@ -64,32 +69,60 @@ classdef informationAnalysis < handle
         for j=k+1:obj.chNum
           idx=1;   
           for i=obj.skipSecondsStart*s.eegFs+obj.winSize+1:s.eegFs/obj.miFs:obj.idxEnd  
-            obj.miBuf(chIdx,idx)=calculateMutualInformation(s.record(k,i-obj.winSize: ...
+            obj.miBuf(chIdx,idx)=muinfo(s.record(k,i-obj.winSize: ...
               i+obj.winSize),s.record(j,i-obj.winSize:i+obj.winSize));  
+            
+            % Permutate second signal for surrogate obtaining
             permData=s.record(j,i-obj.winSize:i+obj.winSize);
             permData=permData(randperm(length(permData)));
-            obj.miSurBuf(chIdx,idx)=calculateMutualInformation(s.record(k,i-obj.winSize: ...
+            obj.miSurBuf(chIdx,idx)=muinfo(s.record(k,i-obj.winSize: ...
               i+obj.winSize),permData);  
+            
             idx=idx+1;
           end
           obj.miLabels{chIdx}=([s.label{k},'-',s.label{j}]);
+          
+          % Store averaged MI and other info 
+          seizureIdx=false(zeros(size(obj.tMiBuf)));
+          for i=1:nOfSeizures
+            seizureIdx=seizureIdx+obj.tMiBuf>=s.seizureTimings(i,1) & ...
+              obj.tMiBuf<=s.seizureTimings(i,2);
+          end
+          nonSeizureIdx=~seizureIdx;
+          obj.miChBuf(chIdx,1)=mean(obj.miBuf(nonSeizureIdx));
+          obj.miChBuf(chIdx,2)=mean(obj.miSurBuf(nonSeizureIdx));
+          if (nOfSeizures>0)
+            obj.miChBuf(chIdx,3)=mean(obj.miBuf(seizureIdx));
+            obj.miChBuf(chIdx,4)=mean(obj.miSurBuf(seizureIdx));
+          else
+            obj.miChBuf(chIdx,3)=Nan;
+            obj.miChBuf(chIdx,4)=Nan;
+          end
+          miCellBuf{chIdx,1}=obj.miLabels{chIdx};
+          miCellBuf{chIdx,2}=s.patientName;
+          
           chIdx=chIdx+1;
         end
       end
-
-      obj.plotMiData(s,path,'miAllChannels',obj.miBuf);
-      obj.plotMiData(s,path,'miAllSurrChannels',obj.miSurBuf);
+      miChBuf=obj.miChBuf;
       
-      pairNum=1;
+      if (verbose>0)
+        obj.plotMiData(s,path,'miAllChannels',obj.miBuf);
+        obj.plotMiData(s,path,'miAllSurrChannels',obj.miSurBuf);
+      end
+           
       % Box plot
+      pairIdx=max(obj.miChBuf(:,1)); % The channels pair with the highest MI will be analysed next
       [nOfSeizures,~]=size(s.seizureTimings);
       for i=1:nOfSeizures
-        annMiFs=s.annSeizure(obj.skipSecondsStart*s.eegFs+obj.winSize+1:s.eegFs/obj.miFs:obj.idxEnd);
         seizureIdx=find(obj.tMiBuf>=s.seizureTimings(i,1) & obj.tMiBuf<=s.seizureTimings(i,2));
         nonSeizureIdx=seizureIdx-length(seizureIdx);
         f=figure;
-        boxplot([obj.miBuf(pairNum,nonSeizureIdx)',obj.miBuf(pairNum,seizureIdx)'],{'Pre-seizure','Seizure'}); hold on;
-        title({'MI box plot',['Seizure length = ',num2str(obj.tMiBuf(seizureIdx(end))-obj.tMiBuf(seizureIdx(1)))]});
+        boxplot([obj.miBuf(pairIdx,nonSeizureIdx)',obj.miSurBuf(pairIdx,nonSeizureIdx)', ...
+          obj.miBuf(pairIdx,seizureIdx)',obj.miSurBuf(pairIdx,seizureIdx)'], ...
+          {'Pre-seizure','Pre-seizure surrogate','Seizure','Seizure surrogate'}); hold on;
+        title({'MI box plot',['Channels: ',obj.miLabels{pairIdx},', Seizure length = ', ...
+          num2str(obj.tMiBuf(seizureIdx(end))-obj.tMiBuf(seizureIdx(1)))]});
         grid on;
         savePlot2File(f,'png',path,['boxPlot',num2str(i)]);
         savePlot2File(f,'fig',path,['boxPlot',num2str(i)]);
@@ -98,6 +131,7 @@ classdef informationAnalysis < handle
       disp('Done.');
     end
 
+    % Function for plotting results from estMutualInfTimeDomain(~)
     function plotMiData(obj,s,path,fname,miBuf)
       colors=[1,0,1;0.1,0.7,0.1;0,0,1;0,0.2,0.8]';
       f=figure;
@@ -144,29 +178,31 @@ classdef informationAnalysis < handle
       savePlot2File(f,'fig',path,fname);
     end
     
-    function miSzChBuf=estMiAllPairs(obj,s,path)
+    % Function for MI estimation for all epileptic seizures set. MI window
+    % size equals length of the seizure for each pair pre-seizure/seizure
+    % MI.
+    function [miSzChBuf,nOfSeizures]=estMiAllPairs(obj,s,path)
       [nOfSeizures,~]=size(s.seizureTimings);
       disp('Calculating mutual information...');
-      miSzChBuf=zeros(obj.miChNum8nOfSeizures,4);
+      miSzChBuf=zeros(obj.miChNum*nOfSeizures,4);
       t=0:1/s.eegFs:(s.eegLen-1)/s.eegFs;
       for i=1:nOfSeizures
         chIdx=1;
         for k=1:obj.chNum
           disp(['Channel #',num2str(k),'...']);
           for j=k+1:obj.chNum
-            idx=1;   
             seizureIdx=find(t>=s.seizureTimings(i,1) & t<=s.seizureTimings(i,2));
             preSeizureIdx=seizureIdx-length(seizureIdx);
 
-            obj.miChBuf(chIdx,3)=calculateMutualInformation(s.record(k,seizureIdx),s.record(j,seizureIdx));
+            obj.miChBuf(chIdx,3)=muinfo(s.record(k,seizureIdx),s.record(j,seizureIdx));
             permData=s.record(j,seizureIdx);
             permData=permData(randperm(length(permData)));
-            obj.miChBuf(chIdx,4)=calculateMutualInformation(s.record(k,seizureIdx),permData);
+            obj.miChBuf(chIdx,4)=muinfo(s.record(k,seizureIdx),permData);
             
-            obj.miChBuf(chIdx,1)=calculateMutualInformation(s.record(k,preSeizureIdx),s.record(j,preSeizureIdx));
+            obj.miChBuf(chIdx,1)=muinfo(s.record(k,preSeizureIdx),s.record(j,preSeizureIdx));
             permData=s.record(j,preSeizureIdx);
             permData=permData(randperm(length(permData)));
-            obj.miChBuf(chIdx,2)=calculateMutualInformation(s.record(k,seizureIdx),permData);
+            obj.miChBuf(chIdx,2)=muinfo(s.record(k,seizureIdx),permData);
             
             obj.miLabels{chIdx}=([s.label{k},'-',s.label{j}]);
             chIdx=chIdx+1;
@@ -178,7 +214,10 @@ classdef informationAnalysis < handle
         grid on;
         savePlot2File(f,'png',path,['AllChPairs_BoxPlot',num2str(i)]);
         savePlot2File(f,'fig',path,['AllChPairs_BoxPlot',num2str(i)]);
+
+        miSzChBuf((i-1)*obj.miChNum+1:i*obj.miChNum,:)=obj.miChBuf;
       end 
     end
-  end
-end
+    
+  end % methods
+end % classdef

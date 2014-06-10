@@ -1,4 +1,4 @@
-% Example ploting one channel of signal
+% Example ploting one channel of EEG signal
 %
 function simplePlot(s,path)
   chNum=round(1+(s.chNum-1)*rand(1,1));
