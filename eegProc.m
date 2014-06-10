@@ -9,7 +9,7 @@ end
 
 path='eeg_data/physionet.org/physiobank/database/chbmit/'; % Directory containing db
 reportPath='reports/';
-recordsFileName='RECORDS-WITH-SEIZURES'; % File with list of signals
+recordsFileName='RECORDS'; % File with list of signals
 subjectInfoFileName='SUBJECT-INFO'; % Name of the file that contains info about patients
 
 useAllSignalsFl=0; % Flag to use all signals in db
@@ -21,8 +21,8 @@ loadSeizuresAnnotationFl=1; % Flag to load data about seizures
 allPatientsDataAnalysisFl=0; % FLag to perform analysis for all patients
 verbose=0; % Flag to do plots
 
-sigIdx=[1:52,54:140]; % File index to load
-% [] % Confirmed data RECORDS
+sigIdx=[1:332,334:664]; % File index to load
+% [1:332,334:664] % Confirmed data RECORDS
 % [1:52,54:140] % Confirmed data with seizures RECORDS-WITH-SEIZURES
 
 if (~exist(reportPath,'dir'))
@@ -35,6 +35,7 @@ disp(['Records number in list ',recordsFileName,': ',num2str(recordsNum)]);
 if (useAllSignalsFl>0 && recordsNum>0)
   sigIdx=1:recordsNum;
 end
+disp(['Number of signals to proccess: ',num2str(numel(sigIdx))]);
 
 miChBuf=[];
 miCellBuf={};
@@ -76,7 +77,7 @@ for i=sigIdx
   disp('Processing...');
   % Place your processing functions here ----------------------------------
   % Example:
-  simplePlot(s,reportPathRecord);
+%   simplePlot(s,reportPathRecord);
   
   % Save data to .mat file
 %   mkdir('eeg_data/chbmit_mat/');
@@ -86,7 +87,7 @@ for i=sigIdx
   estInfTr=informationAnalysis(s);
   [miCh,miCell]=estInfTr.estMutualInfTimeDomain(s,reportPathRecord,verbose);
   miChBuf=[miChBuf;miCh];
-  miCellBuf={miCellBuf;miCell};
+  miCellBuf=[miCellBuf;miCell];
   
   if (allPatientsDataAnalysisFl>0)
     % Seizure length statistics, [1:52,54:140]
@@ -105,6 +106,58 @@ for i=sigIdx
   % -----------------------------------------------------------------------
   disp('Processing is done!');
 end
+
+chPairsNum=length(miChBuf(:,3));
+patients={'chb01','chb02','chb03','chb04','chb05', ...
+  'chb06','chb07','chb08','chb09','chb10','chb11', ...
+  'chb12','chb13','chb14','chb15','chb16','chb17', ...
+  'chb18','chb19','chb20','chb21','chb22','chb23'};
+for i=1:numel(patients) 
+  idx=false(chPairsNum,1);
+  cnt=0;
+  for k=1:chPairsNum
+    if (strcmp(miCellBuf{k,2},patients{i}))
+      idx(k)=true;
+      cnt=cnt+1;
+    end
+  end
+  if (cnt>0)
+    f=figure;
+    hs(1)=subplot(1,2,1);
+    boxplot([miChBuf(idx,1:2)], ...
+      {'Pre-seizure','Pre-seizure surrogate'}); hold on;
+    title({'MI all data',['Patient: ',patients{i}]});
+    grid on;
+    hs(2)=subplot(1,2,2);
+    idx=logical(idx & ~isnan(miChBuf(:,3)));
+    boxplot([(miChBuf(idx,3:4))], ...
+      {'Seizure','Seizure surrogate'}); hold on;
+    title({'MI all data',['Patient: ',patients{i}]});
+    grid on;
+    linkaxes(hs, 'y');
+    savePlot2File(f,'png',[reportPath,patients{i},'/'],'avMi_allSignals_2sWindow');
+    savePlot2File(f,'fig',[reportPath,patients{i},'/'],'avMi_allSignals_2sWindow');
+  
+    close all;
+  end
+end
+
+f=figure;
+hs(1)=subplot(1,2,1);
+boxplot([miChBuf(:,1:2)], ...
+  {'Pre-seizure','Pre-seizure surrogate'}); hold on;
+title({'MI all data',['Number of signals: ',num2str(length(sigIdx))]});
+grid on;
+hs(2)=subplot(1,2,2);
+idx=false(chPairsNum,1);
+idx=logical(idx+~isnan(miChBuf(:,3)));
+boxplot([miChBuf(idx,3:4)], ...
+  {'Seizure','Seizure surrogate'}); hold on;
+title({'MI all data',['Number of signals: ',num2str(length(sigIdx))]});
+grid on;
+linkaxes(hs, 'y');
+savePlot2File(f,'png',reportPath,'avMi_allSignals_2sWindow');
+savePlot2File(f,'fig',reportPath,'avMi_allSignals_2sWindow');
 
 if (allPatientsDataAnalysisFl>0)
   % Seizure length statistics

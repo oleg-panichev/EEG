@@ -2,10 +2,10 @@
 %
 classdef informationAnalysis < handle
   properties (SetAccess='private') 
-    skipSecondsStart=2900; % Number of seconds to skip from the begining
-    skipSecondsEnd=200; % Number of seconds to use after skipSecondsStart
+    skipSecondsStart=0; % Number of seconds to skip from the begining
+    skipSecondsEnd=0; % Number of seconds to use after skipSecondsStart
     miFs=1; % Sample rate of mutual information
-    chNum=4; % Number of first N channels to analize, 0 - to use all channels
+    chNum=0; % Number of first N channels to analize, 0 - to use all channels
     winSize; % Size of window to analyze signal
     
     idxEnd;
@@ -83,7 +83,7 @@ classdef informationAnalysis < handle
           obj.miLabels{chIdx}=([s.label{k},'-',s.label{j}]);
           
           % Store averaged MI and other info 
-          seizureIdx=false(zeros(size(obj.tMiBuf)));
+          seizureIdx=false(size(obj.tMiBuf));
           for i=1:nOfSeizures
             seizureIdx=seizureIdx+obj.tMiBuf>=s.seizureTimings(i,1) & ...
               obj.tMiBuf<=s.seizureTimings(i,2);
@@ -95,8 +95,8 @@ classdef informationAnalysis < handle
             obj.miChBuf(chIdx,3)=mean(obj.miBuf(seizureIdx));
             obj.miChBuf(chIdx,4)=mean(obj.miSurBuf(seizureIdx));
           else
-            obj.miChBuf(chIdx,3)=Nan;
-            obj.miChBuf(chIdx,4)=Nan;
+            obj.miChBuf(chIdx,3)=NaN;
+            obj.miChBuf(chIdx,4)=NaN;
           end
           miCellBuf{chIdx,1}=obj.miLabels{chIdx};
           miCellBuf{chIdx,2}=s.patientName;
@@ -112,7 +112,7 @@ classdef informationAnalysis < handle
       end
            
       % Box plot
-      pairIdx=max(obj.miChBuf(:,1)); % The channels pair with the highest MI will be analysed next
+      [~,pairIdx]=max(obj.miChBuf(:,1)); % The channels pair with the highest MI will be analysed next
       [nOfSeizures,~]=size(s.seizureTimings);
       for i=1:nOfSeizures
         seizureIdx=find(obj.tMiBuf>=s.seizureTimings(i,1) & obj.tMiBuf<=s.seizureTimings(i,2));
