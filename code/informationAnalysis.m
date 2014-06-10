@@ -5,7 +5,7 @@ classdef informationAnalysis < handle
     skipSecondsStart=0; % Number of seconds to skip from the begining
     skipSecondsEnd=0; % Number of seconds to use after skipSecondsStart
     miFs=1; % Sample rate of mutual information
-    chNum=0; % Number of first N channels to analize, 0 - to use all channels
+    chNum=3; % Number of first N channels to analize, 0 - to use all channels
     winSize; % Size of window to analyze signal
     
     idxEnd;
@@ -66,7 +66,7 @@ classdef informationAnalysis < handle
       disp('Calculating mutual information...');
       for k=1:obj.chNum
         disp(['Channel #',num2str(k),'...']);
-        for j=k+1:obj.chNum
+        for j=(k+1):obj.chNum
           idx=1;   
           for i=obj.skipSecondsStart*s.eegFs+obj.winSize+1:s.eegFs/obj.miFs:obj.idxEnd  
             obj.miBuf(chIdx,idx)=muinfo(s.record(k,i-obj.winSize: ...
@@ -114,18 +114,30 @@ classdef informationAnalysis < handle
       % Box plot
       [~,pairIdx]=max(obj.miChBuf(:,1)); % The channels pair with the highest MI will be analysed next
       [nOfSeizures,~]=size(s.seizureTimings);
-      for i=1:nOfSeizures
-        seizureIdx=find(obj.tMiBuf>=s.seizureTimings(i,1) & obj.tMiBuf<=s.seizureTimings(i,2));
-        nonSeizureIdx=seizureIdx-length(seizureIdx);
+      if (nOfSeizures>0)
+        for i=1:nOfSeizures
+          seizureIdx=find(obj.tMiBuf>=s.seizureTimings(i,1) & obj.tMiBuf<=s.seizureTimings(i,2));
+          nonSeizureIdx=seizureIdx-length(seizureIdx);
+          f=figure;
+          boxplot([obj.miBuf(pairIdx,nonSeizureIdx)',obj.miSurBuf(pairIdx,nonSeizureIdx)', ...
+            obj.miBuf(pairIdx,seizureIdx)',obj.miSurBuf(pairIdx,seizureIdx)'], ...
+            {'Pre-seizure','Pre-seizure surrogate','Seizure','Seizure surrogate'}); hold on;
+          title({'MI box plot',['Channels: ',obj.miLabels{pairIdx},', Seizure length = ', ...
+            num2str(obj.tMiBuf(seizureIdx(end))-obj.tMiBuf(seizureIdx(1))), ...
+            ', MI window length: ',num2str(obj.winSize/s.eegFs),' s']});
+          grid on;
+          savePlot2File(f,'png',path,['boxPlot',num2str(i),'_w',num2str(obj.winSize/s.eegFs),'s']);
+          savePlot2File(f,'fig',path,['boxPlot',num2str(i),'_w',num2str(obj.winSize/s.eegFs),'s']);
+        end
+      else
         f=figure;
-        boxplot([obj.miBuf(pairIdx,nonSeizureIdx)',obj.miSurBuf(pairIdx,nonSeizureIdx)', ...
-          obj.miBuf(pairIdx,seizureIdx)',obj.miSurBuf(pairIdx,seizureIdx)'], ...
-          {'Pre-seizure','Pre-seizure surrogate','Seizure','Seizure surrogate'}); hold on;
-        title({'MI box plot',['Channels: ',obj.miLabels{pairIdx},', Seizure length = ', ...
-          num2str(obj.tMiBuf(seizureIdx(end))-obj.tMiBuf(seizureIdx(1)))]});
+        boxplot([obj.miBuf(pairIdx,:)',obj.miSurBuf(pairIdx,:)'], ...
+          {'Non-seizure','Non-seizure surrogate'}); hold on;
+        title({'MI box plot',['Channels: ',obj.miLabels{pairIdx}, ...
+          ', MI window length: ',num2str(obj.winSize/s.eegFs),' s']});
         grid on;
-        savePlot2File(f,'png',path,['boxPlot',num2str(i)]);
-        savePlot2File(f,'fig',path,['boxPlot',num2str(i)]);
+        savePlot2File(f,'png',path,['boxPlot',num2str(i),'_w',num2str(obj.winSize/s.eegFs),'s']);
+        savePlot2File(f,'fig',path,['boxPlot',num2str(i),'_w',num2str(obj.winSize/s.eegFs),'s']);
       end
       
       disp('Done.');

@@ -27,4 +27,5 @@ function ann=loadSeizuresAnnotation(s,fileName)
   end
   s.annSeizure=ann;
   s.seizureTimings=seizureTimings;
+  fclose(file);
 end

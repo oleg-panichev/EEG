@@ -7,7 +7,9 @@ if (exist('fileName','var'))
   oldFileName=fileName;
 end
 
-path='eeg_data/physionet.org/physiobank/database/chbmit/'; % Directory containing db
+path='eeg_data/chbmit_mat/'; % Directory containing db
+% 'eeg_data/physionet.org/physiobank/database/chbmit/'
+% 'eeg_data/chbmit_mat/'
 reportPath='reports/';
 recordsFileName='RECORDS'; % File with list of signals
 subjectInfoFileName='SUBJECT-INFO'; % Name of the file that contains info about patients
@@ -21,7 +23,7 @@ loadSeizuresAnnotationFl=1; % Flag to load data about seizures
 allPatientsDataAnalysisFl=0; % FLag to perform analysis for all patients
 verbose=0; % Flag to do plots
 
-sigIdx=[1:332,334:664]; % File index to load
+sigIdx=[1,3]; % File index to load
 % [1:332,334:664] % Confirmed data RECORDS
 % [1:52,54:140] % Confirmed data with seizures RECORDS-WITH-SEIZURES
 
@@ -125,7 +127,7 @@ for i=1:numel(patients)
     f=figure;
     hs(1)=subplot(1,2,1);
     boxplot([miChBuf(idx,1:2)], ...
-      {'Pre-seizure','Pre-seizure surrogate'}); hold on;
+      {'Non-seizure','Non-seizure surrogate'}); hold on;
     title({'MI all data',['Patient: ',patients{i}]});
     grid on;
     hs(2)=subplot(1,2,2);
@@ -145,7 +147,7 @@ end
 f=figure;
 hs(1)=subplot(1,2,1);
 boxplot([miChBuf(:,1:2)], ...
-  {'Pre-seizure','Pre-seizure surrogate'}); hold on;
+  {'Non-seizure','Non-seizure surrogate'}); hold on;
 title({'MI all data',['Number of signals: ',num2str(length(sigIdx))]});
 grid on;
 hs(2)=subplot(1,2,2);
