@@ -2,7 +2,7 @@
 %
 classdef informationAnalysis < handle
   properties (SetAccess='private') 
-    skipSecondsStart=0; % Number of seconds to skip from the begining
+    skipSecondsStart=2500; % Number of seconds to skip from the begining
     skipSecondsEnd=0; % Number of seconds to use after skipSecondsStart
     miFs=1; % Sample rate of mutual information
     chNum=3; % Number of first N channels to analize, 0 - to use all channels
@@ -105,6 +105,55 @@ classdef informationAnalysis < handle
         end
       end
       miChBuf=obj.miChBuf;
+      
+      %--------------------------------------------------------------------
+      miBuf=obj.miBuf;
+      for i=obj.skipSecondsStart*s.eegFs+obj.winSize+1:s.eegFs/obj.miFs:obj.idxEnd
+        for k=1:obj.chNum
+          disp(['Channel #',num2str(k),'...']);
+          parfor j=(k+1):obj.chNum
+            idx=1;   
+            
+            miBuf(chIdx,idx)=muinfo(s.record(k,i-obj.winSize: ...
+              i+obj.winSize),s.record(j,i-obj.winSize:i+obj.winSize));  
+            
+            % Permutate second signal for surrogate obtaining
+            permData=s.record(j,i-obj.winSize:i+obj.winSize);
+            permData=permData(randperm(length(permData)));
+            obj.miSurBuf(chIdx,idx)=muinfo(s.record(k,i-obj.winSize: ...
+              i+obj.winSize),permData);  
+            
+            obj.miLabels{chIdx}=([s.label{k},'-',s.label{j}]);
+            
+            idx=idx+1;
+          end
+          
+          
+          
+          % Store averaged MI and other info 
+          seizureIdx=false(size(obj.tMiBuf));
+          for i=1:nOfSeizures
+            seizureIdx=seizureIdx+obj.tMiBuf>=s.seizureTimings(i,1) & ...
+              obj.tMiBuf<=s.seizureTimings(i,2);
+          end
+          nonSeizureIdx=~seizureIdx;
+          obj.miChBuf(chIdx,1)=mean(obj.miBuf(nonSeizureIdx));
+          obj.miChBuf(chIdx,2)=mean(obj.miSurBuf(nonSeizureIdx));
+          if (nOfSeizures>0)
+            obj.miChBuf(chIdx,3)=mean(obj.miBuf(seizureIdx));
+            obj.miChBuf(chIdx,4)=mean(obj.miSurBuf(seizureIdx));
+          else
+            obj.miChBuf(chIdx,3)=NaN;
+            obj.miChBuf(chIdx,4)=NaN;
+          end
+          miCellBuf{chIdx,1}=obj.miLabels{chIdx};
+          miCellBuf{chIdx,2}=s.patientName;
+          
+          chIdx=chIdx+1;
+        end
+      end
+      miChBuf=obj.miChBuf;
+      %--------------------------------------------------------------------
       
       if (verbose>0)
         obj.plotMiData(s,path,'miAllChannels',obj.miBuf);

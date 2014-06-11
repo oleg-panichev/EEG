@@ -51,6 +51,7 @@ end
 
 for i=sigIdx
   disp('>---------------------------------------------------------------');
+  tic;
   if (numel(sigIdx)>1)
     clear s;
   end
@@ -106,8 +107,9 @@ for i=sigIdx
  
   close all;
   % -----------------------------------------------------------------------
-  disp('Processing is done!');
+  disp(['Elapsed time: ',num2str(toc),' s']);
 end
+disp('Processing is done!');
 
 chPairsNum=length(miChBuf(:,3));
 patients={'chb01','chb02','chb03','chb04','chb05', ...
