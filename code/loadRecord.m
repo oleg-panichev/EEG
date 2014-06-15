@@ -3,7 +3,9 @@
 function [s]=loadRecord(path,fileName,subjectInfoFileName,...
     loadRecordFl,loadPatientInfoFl,loadSeizuresAnnotationFl)
   fullFileName=strcat(path,fileName);
-  fullFileName=[fullFileName{1}];
+  if (iscell(fullFileName))
+    fullFileName=[fullFileName{1}];
+  end
   dataType=lower(fullFileName(end-2:end));
   if (strcmp(dataType,'edf'))
     s=eegData();
