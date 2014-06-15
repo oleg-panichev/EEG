@@ -33,7 +33,7 @@ classdef Patient < handle
       % Loading data from signals
       numOfSignals=signals.size();
       obj.signalsAll=cell(numOfSignals,4);
-      shift=0;
+      shift=[];
       for i=1:numOfSignals
         disp(['Reading data from ',[patientDir(end-4:end),'/',signals.get(i-1)],'...']);
         s=loadRecord(patientDir(1:end-5),[patientDir(end-4:end),'/', ...
@@ -48,13 +48,13 @@ classdef Patient < handle
         obj.signalsAll{i,1}=signals.get(i-1);
         obj.signalsAll{i,2}=s.starttime;
         if (~isempty(s.starttime))
-          obj.signalsAll{i,2}=double(datenum([s.startdate,'.',s.starttime],'dd.mm.yy.HH.MM.SS'));
-          obj.signalsAll{i,2}
+          [Y,M,D,H,MN,S]=datevec([s.startdate,'.',s.starttime],'dd.mm.yy.HH.MM.SS');
+          dateVector=DateVector(Y,M,D,H,MN,S);
           % Shifting all the data (First signal starts at 0-th second)
-          if(shift==0)
-            shift=obj.signalsAll{i,2};
+          if(isempty(shift))
+            shift=dateVector;
           end
-%           obj.signalsAll{i,2}=obj.signalsAll{i,2}-shift;
+          obj.signalsAll{i,2}=dateVector.date2sec(shift);
         else
           if (i>1)
             obj.signalsAll{i,2}=obj.signalsAll{i-1,2}+obj.signalsAll{i-1,3};

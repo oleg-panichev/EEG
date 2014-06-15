@@ -23,9 +23,9 @@ function ann=loadSeizuresAnnotation(s,fileName)
       seizureTimings(i,1)=seizureStart;
       seizureTimings(i,2)=seizureEnd;
       shiftBytes=shiftBytes+16;
-    end   
+    end  
+    fclose(file);
   end
   s.annSeizure=ann;
-  s.seizureTimings=seizureTimings;
-  fclose(file);
+  s.seizureTimings=seizureTimings;  
 end

@@ -3,18 +3,21 @@ clearvars -except fileName s;
 clc;
 
 addpath('code');
+addpath('classes');
 if (exist('fileName','var'))
   oldFileName=fileName;
 end
 
-path='eeg_data/chbmit_mat/'; % Directory containing db
+path='eeg_data/physionet.org/physiobank/database/chbmit/'; % Directory containing db
 % 'eeg_data/physionet.org/physiobank/database/chbmit/'
 % 'eeg_data/chbmit_mat/'
 reportPath='reports/';
-recordsFileName='RECORDS'; % File with list of signals
+recordsFileName='RECORDS-WITH-SEIZURES'; % File with list of signals
+% 'RECORDS'
+% 'RECORDS-WITH-SEIZURES'
 subjectInfoFileName='SUBJECT-INFO'; % Name of the file that contains info about patients
 
-useAllSignalsFl=0; % Flag to use all signals in db
+useAllSignalsFl=1; % Flag to use all signals in db
 forceReloadFl=1; % Flag to force data reloading
 loadRecordFl=1; % Flag to load main data and signals
 loadPatientInfoFl=1; % Flag to load data about patient
@@ -35,7 +38,7 @@ recordsList=textscan(file,'%s');
 recordsNum=numel(recordsList{1,1});
 disp(['Records number in list ',recordsFileName,': ',num2str(recordsNum)]);
 if (useAllSignalsFl>0 && recordsNum>0)
-  sigIdx=1:recordsNum;
+  sigIdx=19:recordsNum;
 end
 disp(['Number of signals to proccess: ',num2str(numel(sigIdx))]);
 
@@ -49,9 +52,11 @@ if (allPatientsDataAnalysisFl>0)
   idx=1;
 end
 
+% Main Processing Loop
 for i=sigIdx
   disp('>---------------------------------------------------------------');
   tic;
+  % Loading data
   if (numel(sigIdx)>1)
     clear s;
   end
@@ -87,23 +92,23 @@ for i=sigIdx
 %   mkdir(['eeg_data/chbmit_mat/',fileName{1}(1:5)]);
 %   exportToMat(['eeg_data/chbmit_mat/',fileName{1}(1:end-3),'mat'],s);
 
-  estInfTr=informationAnalysis(s);
-  [miCh,miCell]=estInfTr.estMutualInfTimeDomain(s,reportPathRecord,verbose);
-  miChBuf=[miChBuf;miCh];
-  miCellBuf=[miCellBuf;miCell];
-  
-  if (allPatientsDataAnalysisFl>0)
-    % Seizure length statistics, [1:52,54:140]
-    for k=1:(numel(s.seizureTimings)/2)
-      seizuresLength(idx)=s.seizureTimings(k,2)-s.seizureTimings(k,1);
-      idx=idx+1;
-    end
-
-    % MI in seizure-length-dependent window
-    [miSzCh,nOfSeizures]=estInfTr.estMiAllPairs(s,reportPathRecord);
-    miSzChBuf=[miSzChBuf;miSzCh];
-    totalNofSeizures=totalNofSeizures+nOfSeizures;
-  end
+%   estInfTr=informationAnalysis(s);
+%   [miCh,miCell]=estInfTr.estMutualInfTimeDomain(s,reportPathRecord,verbose);
+%   miChBuf=[miChBuf;miCh];
+%   miCellBuf=[miCellBuf;miCell];
+%   
+%   if (allPatientsDataAnalysisFl>0)
+%     % Seizure length statistics, [1:52,54:140]
+%     for k=1:(numel(s.seizureTimings)/2)
+%       seizuresLength(idx)=s.seizureTimings(k,2)-s.seizureTimings(k,1);
+%       idx=idx+1;
+%     end
+% 
+%     % MI in seizure-length-dependent window
+%     [miSzCh,nOfSeizures]=estInfTr.estMiAllPairs(s,reportPathRecord);
+%     miSzChBuf=[miSzChBuf;miSzCh];
+%     totalNofSeizures=totalNofSeizures+nOfSeizures;
+%   end
  
   close all;
   % -----------------------------------------------------------------------
@@ -111,75 +116,75 @@ for i=sigIdx
 end
 disp('Processing is done!');
 
-chPairsNum=length(miChBuf(:,3));
-patients={'chb01','chb02','chb03','chb04','chb05', ...
-  'chb06','chb07','chb08','chb09','chb10','chb11', ...
-  'chb12','chb13','chb14','chb15','chb16','chb17', ...
-  'chb18','chb19','chb20','chb21','chb22','chb23'};
-for i=1:numel(patients) 
-  idx=false(chPairsNum,1);
-  cnt=0;
-  for k=1:chPairsNum
-    if (strcmp(miCellBuf{k,2},patients{i}))
-      idx(k)=true;
-      cnt=cnt+1;
-    end
-  end
-  if (cnt>0)
-    f=figure;
-    hs(1)=subplot(1,2,1);
-    boxplot([miChBuf(idx,1:2)], ...
-      {'Non-seizure','Non-seizure surrogate'}); hold on;
-    title({'MI all data',['Patient: ',patients{i}]});
-    grid on;
-    hs(2)=subplot(1,2,2);
-    idx=logical(idx & ~isnan(miChBuf(:,3)));
-    boxplot([(miChBuf(idx,3:4))], ...
-      {'Seizure','Seizure surrogate'}); hold on;
-    title({'MI all data',['Patient: ',patients{i}]});
-    grid on;
-    linkaxes(hs, 'y');
-    savePlot2File(f,'png',[reportPath,patients{i},'/'],'avMi_allSignals_2sWindow');
-    savePlot2File(f,'fig',[reportPath,patients{i},'/'],'avMi_allSignals_2sWindow');
-  
-    close all;
-  end
-end
-
-f=figure;
-hs(1)=subplot(1,2,1);
-boxplot([miChBuf(:,1:2)], ...
-  {'Non-seizure','Non-seizure surrogate'}); hold on;
-title({'MI all data',['Number of signals: ',num2str(length(sigIdx))]});
-grid on;
-hs(2)=subplot(1,2,2);
-idx=false(chPairsNum,1);
-idx=logical(idx+~isnan(miChBuf(:,3)));
-boxplot([miChBuf(idx,3:4)], ...
-  {'Seizure','Seizure surrogate'}); hold on;
-title({'MI all data',['Number of signals: ',num2str(length(sigIdx))]});
-grid on;
-linkaxes(hs, 'y');
-savePlot2File(f,'png',reportPath,'avMi_allSignals_2sWindow');
-savePlot2File(f,'fig',reportPath,'avMi_allSignals_2sWindow');
-
-if (allPatientsDataAnalysisFl>0)
-  % Seizure length statistics
-  nbins=sturges(seizuresLength);
-  f=figure;
-  hist(seizuresLength,nbins);
-  M=mode(seizuresLength);
-  title(['Seizures length distribution, mode=',num2str(M)]);
-  xlabel('Seizure length, s');
-  ylabel('Number of seizures');
-  grid on;
-  savePlot2File(f,'png',reportPath,'seizuresLengthDistribution');
-  savePlot2File(f,'fig',reportPath,'seizuresLengthDistribution');
-  
-  f=figure;
-  boxplot(miSzChBuf,{'Pre-seizure','Pre-seizure surrogate','Seizure','Seizure surrogate'}); 
-  title({'MI box plot',['Number of seizures: ',num2str(totalNofSeizures)]});
-  grid on;
-  savePlot2File(f,'png',reportPath,'AllEpiSignals_AllPairs_BoxPlot');
-  savePlot2File(f,'fig',reportPath,'AllEpiSignals_AllPairs_BoxPlot');
-end
+% chPairsNum=length(miChBuf(:,3));
+% patients={'chb01','chb02','chb03','chb04','chb05', ...
+%   'chb06','chb07','chb08','chb09','chb10','chb11', ...
+%   'chb12','chb13','chb14','chb15','chb16','chb17', ...
+%   'chb18','chb19','chb20','chb21','chb22','chb23'};
+% for i=1:numel(patients) 
+%   idx=false(chPairsNum,1);
+%   cnt=0;
+%   for k=1:chPairsNum
+%     if (strcmp(miCellBuf{k,2},patients{i}))
+%       idx(k)=true;
+%       cnt=cnt+1;
+%     end
+%   end
+%   if (cnt>0)
+%     f=figure;
+%     hs(1)=subplot(1,2,1);
+%     boxplot([miChBuf(idx,1:2)], ...
+%       {'Non-seizure','Non-seizure surrogate'}); hold on;
+%     title({'MI all data',['Patient: ',patients{i}]});
+%     grid on;
+%     hs(2)=subplot(1,2,2);
+%     idx=logical(idx & ~isnan(miChBuf(:,3)));
+%     boxplot([(miChBuf(idx,3:4))], ...
+%       {'Seizure','Seizure surrogate'}); hold on;
+%     title({'MI all data',['Patient: ',patients{i}]});
+%     grid on;
+%     linkaxes(hs, 'y');
+%     savePlot2File(f,'png',[reportPath,patients{i},'/'],'avMi_allSignals_2sWindow');
+%     savePlot2File(f,'fig',[reportPath,patients{i},'/'],'avMi_allSignals_2sWindow');
+%   
+%     close all;
+%   end
+% end
+% 
+% f=figure;
+% hs(1)=subplot(1,2,1);
+% boxplot([miChBuf(:,1:2)], ...
+%   {'Non-seizure','Non-seizure surrogate'}); hold on;
+% title({'MI all data',['Number of signals: ',num2str(length(sigIdx))]});
+% grid on;
+% hs(2)=subplot(1,2,2);
+% idx=false(chPairsNum,1);
+% idx=logical(idx+~isnan(miChBuf(:,3)));
+% boxplot([miChBuf(idx,3:4)], ...
+%   {'Seizure','Seizure surrogate'}); hold on;
+% title({'MI all data',['Number of signals: ',num2str(length(sigIdx))]});
+% grid on;
+% linkaxes(hs, 'y');
+% savePlot2File(f,'png',reportPath,'avMi_allSignals_2sWindow');
+% savePlot2File(f,'fig',reportPath,'avMi_allSignals_2sWindow');
+% 
+% if (allPatientsDataAnalysisFl>0)
+%   % Seizure length statistics
+%   nbins=sturges(seizuresLength);
+%   f=figure;
+%   hist(seizuresLength,nbins);
+%   M=mode(seizuresLength);
+%   title(['Seizures length distribution, mode=',num2str(M)]);
+%   xlabel('Seizure length, s');
+%   ylabel('Number of seizures');
+%   grid on;
+%   savePlot2File(f,'png',reportPath,'seizuresLengthDistribution');
+%   savePlot2File(f,'fig',reportPath,'seizuresLengthDistribution');
+%   
+%   f=figure;
+%   boxplot(miSzChBuf,{'Pre-seizure','Pre-seizure surrogate','Seizure','Seizure surrogate'}); 
+%   title({'MI box plot',['Number of seizures: ',num2str(totalNofSeizures)]});
+%   grid on;
+%   savePlot2File(f,'png',reportPath,'AllEpiSignals_AllPairs_BoxPlot');
+%   savePlot2File(f,'fig',reportPath,'AllEpiSignals_AllPairs_BoxPlot');
+% end

@@ -3,6 +3,7 @@ clearvars -except fileName s;
 clc;
 
 addpath('code');
+addpath('classes');
 if (exist('fileName','var'))
   oldFileName=fileName;
 end
@@ -20,7 +21,7 @@ createPatientDataFlag=1;
 items=dir(path);
 dirs={items([items.isdir]).name};
 dirs=dirs(3:end);
-parfor i=1:2%numel(dirs)
+parfor i=1:numel(dirs)-1
   if (createPatientDataFlag>0)
     if (exist([path,dirs{i},'/PatientData.mat'],'file'))
       warning(['File ',[path,dirs{i},'/PatientData.mat'],' already exist!']);
