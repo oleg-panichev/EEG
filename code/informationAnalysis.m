@@ -5,7 +5,7 @@ classdef informationAnalysis < handle
     skipSecondsStart=0; % Number of seconds to skip from the begining
     skipSecondsEnd=0; % Number of seconds to use after skipSecondsStart
     miFs=1; % Sample rate of mutual information
-    chNum=0; % Number of first N channels to analize, 0 - to use all channels
+    chNum=23; % Number of first N channels to analize, 0 - to use all channels
     winSize; % Size of window to analyze signal
     
     idxEnd;
@@ -24,7 +24,7 @@ classdef informationAnalysis < handle
     function obj=informationAnalysis(s)
       obj.winSize=2*s.eegFs; % Size of window to analyze signal
       % Check parameters
-      if (obj.chNum==0)
+      if (obj.chNum==0 || obj.chNum>s.chNum)
         obj.chNum=s.chNum;
       end  
       if (obj.skipSecondsEnd>0)
@@ -250,14 +250,13 @@ classdef informationAnalysis < handle
         for j=(k+1):obj.chNum
           idx=1;     
           for i=samplesBuf;
-            miBuf(chIdx,idx)=muinfo(s.record(k,i-halfWinSz: ...
-              i+halfWinSz),s.record(j,i-halfWinSz:i+halfWinSz));  
+            miBuf(chIdx,idx)=muinfo(s.record(k,i-halfWinSz:i+halfWinSz),...
+              s.record(j,i-halfWinSz:i+halfWinSz));  
             
             % Permutate second signal for surrogate obtaining
-            permData=s.record(j,i-halfWinSz:i+halfWinSz);
+            permData=s.record(j,(i-halfWinSz):(i+halfWinSz));
             permData=permData(randperm(length(permData)));
-            miSurBuf(chIdx,idx)=muinfo(s.record(k,i-halfWinSz: ...
-              i+halfWinSz),permData);  
+            miSurBuf(chIdx,idx)=muinfo(s.record(k,i-halfWinSz:i+halfWinSz),permData);  
             
             idx=idx+1;
           end

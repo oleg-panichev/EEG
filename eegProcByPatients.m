@@ -101,7 +101,7 @@ for i=1:numel(dirs)-1
         end
         startTime=absStartTime-p.signalsAll{idx,2};
         if (startTime+sDuration>s.records)
-          startTime=s.records-sDuration-1;
+          startTime=s.records-sDuration-miWindowSize-1;
         end
         mi_1H_PreSeizure=ia.windowedShortTimeMi(s,startTime,sDuration,miWindowSize);
         % 2 Hours before the seizure
@@ -125,7 +125,7 @@ for i=1:numel(dirs)-1
         end
         startTime=absStartTime-p.signalsAll{idx,2};
         if (startTime+sDuration>s.records)
-          startTime=s.records-sDuration-1;
+          startTime=s.records-sDuration-miWindowSize-1;
         end
         mi_2H_PreSeizure=ia.windowedShortTimeMi(s,startTime,sDuration,miWindowSize);
         % 3 Hours before the seizure
@@ -149,7 +149,7 @@ for i=1:numel(dirs)-1
         end
         startTime=absStartTime-p.signalsAll{idx,2};
         if (startTime+sDuration>s.records)
-          startTime=s.records-sDuration-1;
+          startTime=s.records-sDuration-miWindowSize-1;
         end
         mi_3H_PreSeizure=ia.windowedShortTimeMi(s,startTime,sDuration,miWindowSize);
         % 4 Hours before the seizure
@@ -173,7 +173,7 @@ for i=1:numel(dirs)-1
         end
         startTime=absStartTime-p.signalsAll{idx,2};
         if (startTime+sDuration>s.records)
-          startTime=s.records-sDuration-1;
+          startTime=s.records-sDuration-miWindowSize-1;
         end
         mi_4H_PreSeizure=ia.windowedShortTimeMi(s,startTime,sDuration,miWindowSize);
         
@@ -230,9 +230,9 @@ for i=1:numel(dirs)-1
         else
           disp(['1H: Loaded from ',p.signalsAll{idx,1},'.']);
         end
-        startTime=absStartTime-p.signalsAll{idx,2};
+        startTime=startTime-p.signalsAll{idx,2};
         if (startTime+sDuration>s.records)
-          startTime=s.records-sDuration-1;
+          startTime=s.records-sDuration-miWindowSize-1;
         end
         mi_1H_PreSeizure=ia.windowedShortTimeMi(s,startTime,sDuration,miWindowSize);
         % 2 Hours before the seizure
@@ -254,9 +254,9 @@ for i=1:numel(dirs)-1
         else
           disp(['2H: Loaded from ',p.signalsAll{idx,1},'.']);
         end
-        startTime=absStartTime-p.signalsAll{idx,2};
+        startTime=startTime-p.signalsAll{idx,2};
         if (startTime+sDuration>s.records)
-          startTime=s.records-sDuration-1;
+          startTime=s.records-sDuration-miWindowSize-1;
         end
         mi_2H_PreSeizure=ia.windowedShortTimeMi(s,startTime,sDuration,miWindowSize);
         % 3 Hours before the seizure
@@ -278,9 +278,9 @@ for i=1:numel(dirs)-1
         else
           disp(['3H: Loaded from ',p.signalsAll{idx,1},'.']);
         end
-        startTime=absStartTime-p.signalsAll{idx,2};
+        startTime=startTime-p.signalsAll{idx,2};
         if (startTime+sDuration>s.records)
-          startTime=s.records-sDuration-1;
+          startTime=s.records-sDuration-miWindowSize-1;
         end
         mi_3H_PreSeizure=ia.windowedShortTimeMi(s,startTime,sDuration,miWindowSize);
         % 4 Hours before the seizure
@@ -302,9 +302,9 @@ for i=1:numel(dirs)-1
         else
           disp(['4H: Loaded from ',p.signalsAll{idx,1},'.']);
         end
-        startTime=absStartTime-p.signalsAll{idx,2};
+        startTime=startTime-p.signalsAll{idx,2};
         if (startTime+sDuration>s.records)
-          startTime=s.records-sDuration-1;
+          startTime=s.records-sDuration-miWindowSize-1;
         end
         mi_4H_PreSeizure=ia.windowedShortTimeMi(s,startTime,sDuration,miWindowSize);
         
