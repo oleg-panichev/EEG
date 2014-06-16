@@ -43,7 +43,7 @@ classdef informationAnalysis < handle
         obj.miChNum=obj.miChNum+i;
         i=i-1;
       end
-      disp(['Number of channel pairs: ',num2str(obj.miChNum)]);
+%       disp(['Number of channel pairs: ',num2str(obj.miChNum)]);
 
       % Prepare buffers for data
       obj.tMiBuf=obj.skipSecondsStart+obj.winSize/s.eegFs+1:1/obj.miFs:obj.idxEnd/s.eegFs;
@@ -246,7 +246,7 @@ classdef informationAnalysis < handle
       miBuf=zeros(obj.miChNum,numel(samplesBuf)); 
       miSurBuf=zeros(obj.miChNum,numel(samplesBuf)); 
       for k=1:obj.chNum
-        disp(['Channel #',num2str(k),'...']);
+%         disp(['Channel #',num2str(k),'...']);
         for j=(k+1):obj.chNum
           idx=1;     
           for i=samplesBuf;
