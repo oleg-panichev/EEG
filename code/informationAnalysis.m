@@ -2,18 +2,18 @@
 %
 classdef informationAnalysis < handle
   properties (SetAccess='private') 
-    skipSecondsStart=2500; % Number of seconds to skip from the begining
+    skipSecondsStart=0; % Number of seconds to skip from the begining
     skipSecondsEnd=0; % Number of seconds to use after skipSecondsStart
     miFs=1; % Sample rate of mutual information
-    chNum=3; % Number of first N channels to analize, 0 - to use all channels
+    chNum=0; % Number of first N channels to analize, 0 - to use all channels
     winSize; % Size of window to analyze signal
     
     idxEnd;
     miChNum;
     tMiBuf;
     miLen;
-    miBuf;
-    miSurBuf;
+%     miBuf;
+%     miSurBuf;
     miLabels;
     
     miChBuf; % miChBuf - pre-seizure,pre-seizure surrogate,seizure,seizure surrogate.
@@ -48,8 +48,8 @@ classdef informationAnalysis < handle
       % Prepare buffers for data
       obj.tMiBuf=obj.skipSecondsStart+obj.winSize/s.eegFs+1:1/obj.miFs:obj.idxEnd/s.eegFs;
       obj.miLen=length(obj.tMiBuf);
-      obj.miBuf=zeros(obj.miChNum,obj.miLen);
-      obj.miSurBuf=zeros(obj.miChNum,obj.miLen);
+%       obj.miBuf=zeros(obj.miChNum,obj.miLen);
+%       obj.miSurBuf=zeros(obj.miChNum,obj.miLen);
       obj.miLabels=cell(obj.miChNum,1);
       
       obj.miChBuf=zeros(obj.miChNum,4);
@@ -89,11 +89,11 @@ classdef informationAnalysis < handle
               obj.tMiBuf<=s.seizureTimings(i,2);
           end
           nonSeizureIdx=~seizureIdx;
-          obj.miChBuf(chIdx,1)=mean(obj.miBuf(nonSeizureIdx));
-          obj.miChBuf(chIdx,2)=mean(obj.miSurBuf(nonSeizureIdx));
+          obj.miChBuf(chIdx,1)=mean(obj.miBuf(nonSeizureIdx)); %%% »—œ–¿¬»“‹ »Õƒ≈ —»–Œ¬¿Õ»≈ 
+          obj.miChBuf(chIdx,2)=mean(obj.miSurBuf(nonSeizureIdx)); %%% »—œ–¿¬»“‹ 
           if (nOfSeizures>0)
-            obj.miChBuf(chIdx,3)=mean(obj.miBuf(seizureIdx));
-            obj.miChBuf(chIdx,4)=mean(obj.miSurBuf(seizureIdx));
+            obj.miChBuf(chIdx,3)=mean(obj.miBuf(seizureIdx)); %%% »—œ–¿¬»“‹ 
+            obj.miChBuf(chIdx,4)=mean(obj.miSurBuf(seizureIdx)); %%% »—œ–¿¬»“‹ 
           else
             obj.miChBuf(chIdx,3)=NaN;
             obj.miChBuf(chIdx,4)=NaN;
@@ -105,55 +105,6 @@ classdef informationAnalysis < handle
         end
       end
       miChBuf=obj.miChBuf;
-      
-      %--------------------------------------------------------------------
-      miBuf=obj.miBuf;
-      for i=obj.skipSecondsStart*s.eegFs+obj.winSize+1:s.eegFs/obj.miFs:obj.idxEnd
-        for k=1:obj.chNum
-          disp(['Channel #',num2str(k),'...']);
-          parfor j=(k+1):obj.chNum
-            idx=1;   
-            
-            miBuf(chIdx,idx)=muinfo(s.record(k,i-obj.winSize: ...
-              i+obj.winSize),s.record(j,i-obj.winSize:i+obj.winSize));  
-            
-            % Permutate second signal for surrogate obtaining
-            permData=s.record(j,i-obj.winSize:i+obj.winSize);
-            permData=permData(randperm(length(permData)));
-            obj.miSurBuf(chIdx,idx)=muinfo(s.record(k,i-obj.winSize: ...
-              i+obj.winSize),permData);  
-            
-            obj.miLabels{chIdx}=([s.label{k},'-',s.label{j}]);
-            
-            idx=idx+1;
-          end
-          
-          
-          
-          % Store averaged MI and other info 
-          seizureIdx=false(size(obj.tMiBuf));
-          for i=1:nOfSeizures
-            seizureIdx=seizureIdx+obj.tMiBuf>=s.seizureTimings(i,1) & ...
-              obj.tMiBuf<=s.seizureTimings(i,2);
-          end
-          nonSeizureIdx=~seizureIdx;
-          obj.miChBuf(chIdx,1)=mean(obj.miBuf(nonSeizureIdx));
-          obj.miChBuf(chIdx,2)=mean(obj.miSurBuf(nonSeizureIdx));
-          if (nOfSeizures>0)
-            obj.miChBuf(chIdx,3)=mean(obj.miBuf(seizureIdx));
-            obj.miChBuf(chIdx,4)=mean(obj.miSurBuf(seizureIdx));
-          else
-            obj.miChBuf(chIdx,3)=NaN;
-            obj.miChBuf(chIdx,4)=NaN;
-          end
-          miCellBuf{chIdx,1}=obj.miLabels{chIdx};
-          miCellBuf{chIdx,2}=s.patientName;
-          
-          chIdx=chIdx+1;
-        end
-      end
-      miChBuf=obj.miChBuf;
-      %--------------------------------------------------------------------
       
       if (verbose>0)
         obj.plotMiData(s,path,'miAllChannels',obj.miBuf);
@@ -280,5 +231,47 @@ classdef informationAnalysis < handle
       end 
     end
     
+    % Function for estimation MI(t) in predefined window for all channels
+    % combinations.
+    function [miAvBuf,miLabels]=windowedShortTimeMi(obj,s,sStartTime, ...
+        sDuration,miWindowSize)    
+      chIdx=1;  
+      miAvBuf=zeros(obj.miChNum,2);
+
+      % Calculate MI for all channels
+      disp('Calculating mutual information...');
+      halfWinSz=round(miWindowSize*s.eegFs/2);
+      samplesBuf=(sStartTime*s.eegFs+halfWinSz+1):(s.eegFs/obj.miFs) ...
+              :((sStartTime+sDuration)*s.eegFs-halfWinSz);
+      miBuf=zeros(obj.miChNum,numel(samplesBuf)); 
+      miSurBuf=zeros(obj.miChNum,numel(samplesBuf)); 
+      for k=1:obj.chNum
+        disp(['Channel #',num2str(k),'...']);
+        for j=(k+1):obj.chNum
+          idx=1;     
+          for i=samplesBuf;
+            miBuf(chIdx,idx)=muinfo(s.record(k,i-halfWinSz: ...
+              i+halfWinSz),s.record(j,i-halfWinSz:i+halfWinSz));  
+            
+            % Permutate second signal for surrogate obtaining
+            permData=s.record(j,i-halfWinSz:i+halfWinSz);
+            permData=permData(randperm(length(permData)));
+            miSurBuf(chIdx,idx)=muinfo(s.record(k,i-halfWinSz: ...
+              i+halfWinSz),permData);  
+            
+            idx=idx+1;
+          end
+          obj.miLabels{chIdx}=([s.label{k},'-',s.label{j}]);
+          
+          % Store averaged MI and other info 
+          miAvBuf(chIdx,1)=mean(miBuf(chIdx,:));
+          miAvBuf(chIdx,2)=mean(miSurBuf(chIdx,:));
+          
+          chIdx=chIdx+1;
+        end
+      end
+      miLabels=obj.miLabels;
+      disp('Done.');
+    end
   end % methods
 end % classdef
