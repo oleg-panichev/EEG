@@ -5,7 +5,7 @@ classdef informationAnalysis < handle
     skipSecondsStart=0; % Number of seconds to skip from the begining
     skipSecondsEnd=0; % Number of seconds to use after skipSecondsStart
     miFs=1; % Sample rate of mutual information
-    chNum=23; % Number of first N channels to analize, 0 - to use all channels
+    chNum=22; % Number of first N channels to analize, 0 - to use all channels
     winSize; % Size of window to analyze signal
     
     idxEnd;

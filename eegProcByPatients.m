@@ -1,5 +1,5 @@
 close all;
-clearvars -except fileName s;
+clear all;
 clc;
 
 addpath('code');
@@ -27,10 +27,11 @@ end
 items=dir(path);
 dirs={items([items.isdir]).name};
 dirs=dirs(3:end);
-windowSizesBuf=[0.25,0.5,2,4]; % Seconds
-for miWindowSize=windowSizesBuf
+windowSizesBuf=[0.25,4]; % Seconds
+parfor miIdx=1:numel(windowSizesBuf)
+  miWindowSize=windowSizesBuf(miIdx);
   disp(['MI WINDOW SIZE = ',num2str(miWindowSize)]);
-  for i=1:numel(dirs)-1
+  for i=1:numel(dirs)-2
     disp('>---------------------------------------------------------------');
     tic;
     % Load patient data
@@ -42,8 +43,8 @@ for miWindowSize=windowSizesBuf
       p.updateFields(i,[path,dirs{i}]);
       p.save([path,dirs{i}]);
     else
-      load([path,'/',dirs{i},'/PatientData.mat']);
-      p=obj;
+      o=load([path,'/',dirs{i},'/PatientData.mat']);
+      p=o.obj;
     end
     disp(['Processing data from ',p.name,'...']);
 
@@ -180,7 +181,7 @@ for miWindowSize=windowSizesBuf
           mi_4H_PreSeizure=ia.windowedShortTimeMi(s,startTime,sDuration,miWindowSize);
 
           % Plot results for current SEIZURE
-          f=figure;
+          f=figure('Visible','Off');
           boxplot([mi_4H_PreSeizure(:,1),mi_3H_PreSeizure(:,1),mi_2H_PreSeizure(:,1), ...
             mi_1H_PreSeizure(:,1),mi_PreSeizure(:,1),mi_Seizure(:,1)], ...
             {'4 Hours','3 Hours','2 Hours','1 Hour','Pre-seizure','Seizure'});
@@ -196,10 +197,10 @@ for miWindowSize=windowSizesBuf
           % Store calculated data
           mi=[mi;mi_4H_PreSeizure,mi_3H_PreSeizure,mi_2H_PreSeizure,mi_1H_PreSeizure, ... 
             mi_PreSeizure,mi_Seizure];
-          save([reportPath,'/',dirs{i},'/','MI_Sz',num2str(sIdx),'_win', ...
+          saveWrapper([reportPath,'/',dirs{i},'/','MI_Sz',num2str(sIdx),'_win', ...
             num2str(miWindowSize),'.mat'], ...
-            'mi_4H_PreSeizure','mi_3H_PreSeizure','mi_2H_PreSeizure', ...
-            'mi_1H_PreSeizure','mi_PreSeizure','mi_Seizure');
+            mi_4H_PreSeizure,mi_3H_PreSeizure,mi_2H_PreSeizure, ...
+            mi_1H_PreSeizure,mi_PreSeizure,mi_Seizure);
         end
       else
         if(p.signalsAll{k,2}>14400)
@@ -314,7 +315,7 @@ for miWindowSize=windowSizesBuf
           mi_4H_PreSeizure=ia.windowedShortTimeMi(s,startTime,sDuration,miWindowSize);
 
           % Plot results for current SEIZURE
-          f=figure;
+          f=figure('Visible','Off');
           boxplot([mi_4H_PreSeizure(:,1),mi_3H_PreSeizure(:,1),mi_2H_PreSeizure(:,1), ...
             mi_1H_PreSeizure(:,1),mi_PreSeizure(:,1),mi_Seizure(:,1)], ...
             {'4 Hours','3 Hours','2 Hours','1 Hour','Pre-seizure','Seizure'});
@@ -330,16 +331,16 @@ for miWindowSize=windowSizesBuf
           % Store calculated data
           mi=[mi;mi_4H_PreSeizure,mi_3H_PreSeizure,mi_2H_PreSeizure,mi_1H_PreSeizure, ... 
             mi_PreSeizure,mi_Seizure];
-          save([reportPath,'/',dirs{i},'/','MI_Sz',num2str(sIdx),'_win', ...
+          saveWrapper([reportPath,'/',dirs{i},'/','MI_Sz',num2str(sIdx),'_win', ...
             num2str(miWindowSize),'.mat'], ...
-            'mi_4H_PreSeizure','mi_3H_PreSeizure','mi_2H_PreSeizure', ...
-            'mi_1H_PreSeizure','mi_PreSeizure','mi_Seizure');
+            mi_4H_PreSeizure,mi_3H_PreSeizure,mi_2H_PreSeizure, ...
+            mi_1H_PreSeizure,mi_PreSeizure,mi_Seizure);
         end
       end
       sIdx=sIdx+1;
     end
     % Plot results for current PATIENT
-    f=figure;
+    f=figure('Visible','Off');
     boxplot([mi(:,1),mi(:,3),mi(:,5),mi(:,7),mi(:,9),mi(:,11)], ...
       {'4 Hours','3 Hours','2 Hours','1 Hour','Pre-seizure','Seizure'});
     ylabel('MI');
@@ -348,7 +349,7 @@ for miWindowSize=windowSizesBuf
     grid on;
     savePlot2File(f,'png',[reportPath,'/',dirs{i},'/'],['MI_AllSz','_win',num2str(miWindowSize)]);
     savePlot2File(f,'fig',[reportPath,'/',dirs{i},'/'],['MI_AllSz','_win',num2str(miWindowSize)]);
-    save([reportPath,'/',dirs{i},'/MI_Total_win',num2str(miWindowSize),'.mat'],'mi');
+    saveWrapper([reportPath,'/',dirs{i},'/MI_Total_win',num2str(miWindowSize),'.mat'],mi);
     disp(['Elapsed time: ',num2str(toc),' s']);
 
     close all;
