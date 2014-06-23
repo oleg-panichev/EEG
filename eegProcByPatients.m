@@ -1,6 +1,4 @@
-close all;
-clear all;
-clc;
+close all; clear all; clc;
 
 addpath('code');
 addpath('classes');
@@ -18,7 +16,6 @@ recordsFileName='RECORDS'; % File with list of signals
 subjectInfoFileName='SUBJECT-INFO'; % Name of the file that contains info about patients
 
 verbose=1; % Flag to make plots
-createPatientDataFlag=0; % Flag to forced patient data-files creation
 
 if (~exist(reportPath,'dir'))
     mkdir(reportPath);
@@ -35,17 +32,8 @@ parfor miIdx=1:numel(windowSizesBuf)
     disp('>---------------------------------------------------------------');
     tic;
     % Load patient data
-    if (createPatientDataFlag>0)
-      if (exist([path,dirs{i},'/PatientData.mat'],'file'))
-        warning(['File ',[path,dirs{i},'/PatientData.mat'],' already exist!']);
-      end
-      p=Patient();
-      p.updateFields(i,[path,dirs{i}]);
-      p.save([path,dirs{i}]);
-    else
-      o=load([path,'/',dirs{i},'/PatientData.mat']);
-      p=o.obj;
-    end
+    o=load([path,'/',dirs{i},'/PatientData.mat']);
+    p=o.obj;
     disp(['Processing data from ',p.name,'...']);
 
     % Create report folder for PATIENT

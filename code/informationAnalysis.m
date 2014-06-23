@@ -45,6 +45,7 @@ classdef informationAnalysis < handle
       end
 %       disp(['Number of channel pairs: ',num2str(obj.miChNum)]);
 
+      
       % Prepare buffers for data
       obj.tMiBuf=obj.skipSecondsStart+obj.winSize/s.eegFs+1:1/obj.miFs:obj.idxEnd/s.eegFs;
       obj.miLen=length(obj.tMiBuf);
@@ -236,6 +237,7 @@ classdef informationAnalysis < handle
     function [miAvBuf,miLabels]=windowedShortTimeMi(obj,s,sStartTime, ...
         sDuration,miWindowSize)    
       chIdx=1;  
+      obj.miFs=round(miWindowSize/2);
       miAvBuf=zeros(obj.miChNum,2);
 
       % Calculate MI for all channels
