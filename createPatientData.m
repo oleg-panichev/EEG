@@ -20,7 +20,7 @@ subjectInfoFileName='SUBJECT-INFO'; % Name of the file that contains info about 
 items=dir(path);
 dirs={items([items.isdir]).name};
 dirs=dirs(3:end);
-for i=1:numel(dirs)-2
+for i=1:numel(dirs)
   disp('>---------------------------------------------------------------');
   disp(['Processing data from ',dirs{i},'...']);
   tic;

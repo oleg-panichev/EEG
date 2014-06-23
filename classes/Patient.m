@@ -72,7 +72,7 @@ classdef Patient < handle
         [obj.signalsAll{i,4},~]=size(s.seizureTimings);       
         % Check signal for good channels:
         for k=1:s.chNum
-          if (~strcmp(s.label{k},''))
+          if (~strcmp(s.label{k},'') && ~strcmp(s.label{k},'ECG'))
             goodChannelIdxBuf=[goodChannelIdxBuf,k];
           end
         end

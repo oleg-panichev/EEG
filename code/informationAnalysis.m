@@ -234,8 +234,15 @@ classdef informationAnalysis < handle
     
     % Function for estimation MI(t) in predefined window for all channels
     % combinations.
-    function [miAvBuf,miLabels]=windowedShortTimeMi(obj,s,sStartTime, ...
-        sDuration,miWindowSize)    
+    % Input:
+    % s - signal data (eegData class)
+    % sigIdxBuf - indexes of channels to analyze
+    % sStartTime - analysis start time, s
+    % sDuration - number of seconds to analyze, s
+    % miWindowSize - window size for MI estimation, s
+    function [miAvBuf,miLabels]=windowedShortTimeMi(obj,s,sigIdxBuf,sStartTime, ...
+        sDuration,miWindowSize)   
+      sStartTime
       chIdx=1;  
       obj.miFs=round(miWindowSize/2);
       miAvBuf=zeros(obj.miChNum,2);
@@ -247,9 +254,10 @@ classdef informationAnalysis < handle
               :((sStartTime+sDuration)*s.eegFs-halfWinSz);
       miBuf=zeros(obj.miChNum,numel(samplesBuf)); 
       miSurBuf=zeros(obj.miChNum,numel(samplesBuf)); 
-      for k=1:obj.chNum
+      for k=sigIdxBuf
 %         disp(['Channel #',num2str(k),'...']);
-        for j=(k+1):obj.chNum
+        for j=sigIdxBuf(sigIdxBuf>k)
+%           disp([num2str(k),'-',num2str(j)]);
           idx=1;     
           for i=samplesBuf;
             miBuf(chIdx,idx)=muinfo(s.record(k,i-halfWinSz:i+halfWinSz),...
