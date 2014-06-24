@@ -25,7 +25,7 @@ end
 items=dir(path);
 dirs={items([items.isdir]).name};
 dirs=dirs(3:end);
-windowSizesBuf=[0.25]; % Seconds
+windowSizesBuf=[0.25,0.5,1]; % Seconds
 if (parallelFlag>0)
   parpool;
 end
@@ -46,7 +46,7 @@ for miIdx=1:numel(windowSizesBuf)
     end
 
     % Processing
-    [sigNum,~]=size(p.signalsAll);
+    sigNum=size(p.signalsAll,1);
     sIdx=1:sigNum;
     seizuresSigIdx=[];
     for n=sIdx
@@ -70,8 +70,8 @@ for miIdx=1:numel(windowSizesBuf)
           sDuration=s.seizureTimings(1,2)-sStartTime; % Seizure duration, seconds
           ia=informationAnalysis(s);
           % Calculate MI during the seizure and right before the seizure
-          sigIdxBuf=p.signalsAll{k,5};
-          sigIdxBuf=sigIdxBuf(sigIdxBuf<=p.minChNum);
+          sigIdxBuf=p.signalsAll{k,5}(1:p.minChNum);
+%           sigIdxBuf=sigIdxBuf(sigIdxBuf<=p.minChNum);
           mi_Seizure=ia.windowedShortTimeMi(s,sigIdxBuf,sStartTime,sDuration,miWindowSize);
           mi_PreSeizure=ia.windowedShortTimeMi(s,sigIdxBuf,(sStartTime-sDuration),sDuration, ...
             miWindowSize);
@@ -97,11 +97,13 @@ for miIdx=1:numel(windowSizesBuf)
             disp(['1H: Loaded from ',p.signalsAll{idx,1},'.']);
           end
           startTime=startTime-p.signalsAll{idx,2};
+          if (startTime+sDuration-s.records>11)
+            continue
+          end
           if (startTime+sDuration>s.records)
             startTime=s.records-sDuration-miWindowSize-1;
           end
-          sigIdxBuf=p.signalsAll{idx,5};
-          sigIdxBuf=sigIdxBuf(sigIdxBuf<=p.minChNum);
+          sigIdxBuf=p.signalsAll{idx,5}(1:p.minChNum);
           mi_1H_PreSeizure=ia.windowedShortTimeMi(s,sigIdxBuf,startTime,sDuration,miWindowSize);
           % 2 Hours before the seizure
           startTime=absStartTime-7200;
@@ -123,11 +125,13 @@ for miIdx=1:numel(windowSizesBuf)
             disp(['2H: Loaded from ',p.signalsAll{idx,1},'.']);
           end
           startTime=startTime-p.signalsAll{idx,2};
+          if (startTime+sDuration-s.records>11)
+            continue
+          end
           if (startTime+sDuration>s.records)
             startTime=s.records-sDuration-miWindowSize-1;
           end
-          sigIdxBuf=p.signalsAll{idx,5};
-          sigIdxBuf=sigIdxBuf(sigIdxBuf<=p.minChNum);
+          sigIdxBuf=p.signalsAll{idx,5}(1:p.minChNum);
           mi_2H_PreSeizure=ia.windowedShortTimeMi(s,sigIdxBuf,startTime,sDuration,miWindowSize);
           % 3 Hours before the seizure
           startTime=absStartTime-10800;
@@ -149,11 +153,13 @@ for miIdx=1:numel(windowSizesBuf)
             disp(['3H: Loaded from ',p.signalsAll{idx,1},'.']);
           end
           startTime=startTime-p.signalsAll{idx,2};
+          if (startTime+sDuration-s.records>11)
+            continue
+          end
           if (startTime+sDuration>s.records)
             startTime=s.records-sDuration-miWindowSize-1;
           end
-          sigIdxBuf=p.signalsAll{idx,5};
-          sigIdxBuf=sigIdxBuf(sigIdxBuf<=p.minChNum);
+          sigIdxBuf=p.signalsAll{idx,5}(1:p.minChNum);
           mi_3H_PreSeizure=ia.windowedShortTimeMi(s,sigIdxBuf,startTime,sDuration,miWindowSize);
           % 4 Hours before the seizure
           startTime=absStartTime-14400;
@@ -175,11 +181,13 @@ for miIdx=1:numel(windowSizesBuf)
             disp(['4H: Loaded from ',p.signalsAll{idx,1},'.']);
           end
           startTime=startTime-p.signalsAll{idx,2};
+          if (startTime+sDuration-s.records>11)
+            continue
+          end
           if (startTime+sDuration>s.records)
             startTime=s.records-sDuration-miWindowSize-1;
           end
-          sigIdxBuf=p.signalsAll{idx,5};
-          sigIdxBuf=sigIdxBuf(sigIdxBuf<=p.minChNum);
+          sigIdxBuf=p.signalsAll{idx,5}(1:p.minChNum);
           mi_4H_PreSeizure=ia.windowedShortTimeMi(s,sigIdxBuf,startTime,sDuration,miWindowSize);
 
           % Plot results for current SEIZURE
@@ -214,8 +222,7 @@ for miIdx=1:numel(windowSizesBuf)
           sDuration=s.seizureTimings(1,2)-sStartTime; % Seizure duration, seconds
           ia=informationAnalysis(s);
           % Calculate MI during the seizure and right before the seizure
-          sigIdxBuf=p.signalsAll{k,5};
-          sigIdxBuf=sigIdxBuf(sigIdxBuf<=p.minChNum);
+          sigIdxBuf=p.signalsAll{k,5}(1:p.minChNum);
           mi_Seizure=ia.windowedShortTimeMi(s,sigIdxBuf,sStartTime,sDuration,miWindowSize);
           mi_PreSeizure=ia.windowedShortTimeMi(s,sigIdxBuf,(sStartTime-sDuration),sDuration, ...
             miWindowSize);
@@ -241,11 +248,13 @@ for miIdx=1:numel(windowSizesBuf)
             disp(['1H: Loaded from ',p.signalsAll{idx,1},'.']);
           end
           startTime=startTime-p.signalsAll{idx,2};
+          if (startTime+sDuration-s.records>11)
+            continue
+          end
           if (startTime+sDuration>s.records)
             startTime=s.records-sDuration-miWindowSize-1;
           end
-          sigIdxBuf=p.signalsAll{idx,5};
-          sigIdxBuf=sigIdxBuf(sigIdxBuf<=p.minChNum);
+          sigIdxBuf=p.signalsAll{idx,5}(1:p.minChNum);
           mi_1H_PreSeizure=ia.windowedShortTimeMi(s,sigIdxBuf,startTime,sDuration,miWindowSize);
           % 2 Hours before the seizure
           startTime=absStartTime-7200;
@@ -267,11 +276,13 @@ for miIdx=1:numel(windowSizesBuf)
             disp(['2H: Loaded from ',p.signalsAll{idx,1},'.']);
           end
           startTime=startTime-p.signalsAll{idx,2};
+          if (startTime+sDuration-s.records>11)
+            continue
+          end
           if (startTime+sDuration>s.records)
             startTime=s.records-sDuration-miWindowSize-1;
           end
-          sigIdxBuf=p.signalsAll{idx,5};
-          sigIdxBuf=sigIdxBuf(sigIdxBuf<=p.minChNum);
+          sigIdxBuf=p.signalsAll{idx,5}(1:p.minChNum);
           mi_2H_PreSeizure=ia.windowedShortTimeMi(s,sigIdxBuf,startTime,sDuration,miWindowSize);
           % 3 Hours before the seizure
           startTime=absStartTime-10800;
@@ -293,11 +304,13 @@ for miIdx=1:numel(windowSizesBuf)
             disp(['3H: Loaded from ',p.signalsAll{idx,1},'.']);
           end
           startTime=startTime-p.signalsAll{idx,2};
+          if (startTime+sDuration-s.records>11)
+            continue
+          end
           if (startTime+sDuration>s.records)
             startTime=s.records-sDuration-miWindowSize-1;
           end
-          sigIdxBuf=p.signalsAll{idx,5};
-          sigIdxBuf=sigIdxBuf(sigIdxBuf<=p.minChNum);
+          sigIdxBuf=p.signalsAll{idx,5}(1:p.minChNum);
           mi_3H_PreSeizure=ia.windowedShortTimeMi(s,sigIdxBuf,startTime,sDuration,miWindowSize);
           % 4 Hours before the seizure
           startTime=absStartTime-14400;
@@ -319,11 +332,13 @@ for miIdx=1:numel(windowSizesBuf)
             disp(['4H: Loaded from ',p.signalsAll{idx,1},'.']);
           end
           startTime=startTime-p.signalsAll{idx,2};
+          if (startTime+sDuration-s.records>11)
+            continue
+          end
           if (startTime+sDuration>s.records)
             startTime=s.records-sDuration-miWindowSize-1;
           end
-          sigIdxBuf=p.signalsAll{idx,5};
-          sigIdxBuf=sigIdxBuf(sigIdxBuf<=p.minChNum);
+          sigIdxBuf=p.signalsAll{idx,5}(1:p.minChNum);
           mi_4H_PreSeizure=ia.windowedShortTimeMi(s,sigIdxBuf,startTime,sDuration,miWindowSize);
 
           % Plot results for current SEIZURE
@@ -351,19 +366,20 @@ for miIdx=1:numel(windowSizesBuf)
       end
       sIdx=sIdx+1;
     end
-    % Plot results for current PATIENT
-    f=figure('Visible','Off');
-    boxplot([mi(:,1),mi(:,3),mi(:,5),mi(:,7),mi(:,9),mi(:,11)], ...
-      {'4 Hours','3 Hours','2 Hours','1 Hour','Pre-seizure','Seizure'});
-    ylabel('MI');
-    title({'Mutual information',['All seizures, MI Win. size: ', ...
-      num2str(miWindowSize),'s']});
-    grid on;
-    savePlot2File(f,'png',[reportPath,'/',dirs{i},'/'],['MI_AllSz','_win',num2str(miWindowSize)]);
-    savePlot2File(f,'fig',[reportPath,'/',dirs{i},'/'],['MI_AllSz','_win',num2str(miWindowSize)]);
-    saveWrapper([reportPath,'/',dirs{i},'/MI_Total_win',num2str(miWindowSize),'.mat'],mi);
-    disp(['Elapsed time: ',num2str(toc),' s']);
-
+    if (size(mi,1)>0 && size(mi,2)>0)
+      % Plot results for current PATIENT
+      f=figure('Visible','Off');
+      boxplot([mi(:,1),mi(:,3),mi(:,5),mi(:,7),mi(:,9),mi(:,11)], ...
+        {'4 Hours','3 Hours','2 Hours','1 Hour','Pre-seizure','Seizure'});
+      ylabel('MI');
+      title({'Mutual information',['All seizures, MI Win. size: ', ...
+        num2str(miWindowSize),'s']});
+      grid on;
+      savePlot2File(f,'png',[reportPath,'/',dirs{i},'/'],['MI_AllSz','_win',num2str(miWindowSize)]);
+      savePlot2File(f,'fig',[reportPath,'/',dirs{i},'/'],['MI_AllSz','_win',num2str(miWindowSize)]);
+      saveWrapper([reportPath,'/',dirs{i},'/MI_Total_win',num2str(miWindowSize),'.mat'],mi);
+      disp(['Elapsed time: ',num2str(toc),' s']);
+    end
     close all;
   end
 end

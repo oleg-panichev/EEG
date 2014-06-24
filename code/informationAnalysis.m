@@ -242,16 +242,24 @@ classdef informationAnalysis < handle
     % miWindowSize - window size for MI estimation, s
     function [miAvBuf,miLabels]=windowedShortTimeMi(obj,s,sigIdxBuf,sStartTime, ...
         sDuration,miWindowSize)   
-      sStartTime
+      disp(['Start time: ',num2str(sStartTime),'s, Duration: ',num2str(sDuration),'s']);
       chIdx=1;  
       obj.miFs=round(miWindowSize/2);
-      miAvBuf=zeros(obj.miChNum,2);
+         
+      % Calculate number of interconnected channels
+      i=numel(sigIdxBuf)-1;
+      obj.miChNum=0;
+      while i>0
+        obj.miChNum=obj.miChNum+i;
+        i=i-1;
+      end     
 
       % Calculate MI for all channels
       disp('Calculating mutual information...');
       halfWinSz=round(miWindowSize*s.eegFs/2);
       samplesBuf=(sStartTime*s.eegFs+halfWinSz+1):(s.eegFs/obj.miFs) ...
               :((sStartTime+sDuration)*s.eegFs-halfWinSz);
+      miAvBuf=zeros(obj.miChNum,2);
       miBuf=zeros(obj.miChNum,numel(samplesBuf)); 
       miSurBuf=zeros(obj.miChNum,numel(samplesBuf)); 
       for k=sigIdxBuf
