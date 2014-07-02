@@ -1,388 +1,209 @@
-close all; clear all; clc;
+function eegProcByPatients()
+  addpath('code');
+  addpath('classes');
+  prepareWorkspace();
 
-addpath('code');
-addpath('classes');
-if (exist('fileName','var'))
-  oldFileName=fileName;
-end
+  wpath='eeg_data/chbmit_mat/'; % Directory containing db
+  % 'eeg_data/physionet.org/physiobank/database/chbmit/'
+  % 'eeg_data/chbmit_mat/'
+  reportwpath='reports_by_patient/';
+  % 'RECORDS'
+  % 'RECORDS-WITH-SEIZURES'
+  subjectInfoFileName='SUBJECT-INFO'; % Name of the file that contains info about patients
 
-path='eeg_data/chbmit_mat/'; % Directory containing db
-% 'eeg_data/physionet.org/physiobank/database/chbmit/'
-% 'eeg_data/chbmit_mat/'
-reportPath='reports_by_patient/';
-recordsFileName='RECORDS'; % File with list of signals
-% 'RECORDS'
-% 'RECORDS-WITH-SEIZURES'
-subjectInfoFileName='SUBJECT-INFO'; % Name of the file that contains info about patients
+  parallelFlag=0;
+  verbose=1; % Flag to make plots
 
-parallelFlag=0;
-verbose=1; % Flag to make plots
+  if (~exist(reportwpath,'dir'))
+      mkdir(reportwpath);
+  end
 
-if (~exist(reportPath,'dir'))
-    mkdir(reportPath);
-end
-  
-items=dir(path);
-dirs={items([items.isdir]).name};
-dirs=dirs(3:end);
-windowSizesBuf=[0.25,0.5,1]; % Seconds
-if (parallelFlag>0)
-  parpool;
-end
-for miIdx=1:numel(windowSizesBuf)
-  miWindowSize=windowSizesBuf(miIdx);
-  disp(['MI WINDOW SIZE = ',num2str(miWindowSize)]);
-  for i=1:numel(dirs)-2
-    disp('>---------------------------------------------------------------');
-    tic;
-    % Load patient data
-    o=load([path,'/',dirs{i},'/PatientData.mat']);
-    p=o.obj;
-    disp(['Processing data from ',p.name,'...']);
+  items=dir(wpath);
+  dirs={items([items.isdir]).name};
+  dirs=dirs(3:end);
+  windowSizesBuf=[0.25]; % Seconds
+  shiftBuf=[14400:-300:300]; % Backshift values from seizure, seconds
+  shiftLabels=cell(1,numel(shiftBuf));
+  for i=1:numel(shiftBuf)
+    shiftLabels{i}=num2str(shiftBuf(i)/60);
+  end
+  shiftLabels{i+1}='Pre';
+  shiftLabels{i+2}='SZ';
+  if (parallelFlag>0)
+    parpool;
+  end
+  for miIdx=1:numel(windowSizesBuf)
+    miWindowSize=windowSizesBuf(miIdx);
+    disp(['MI WINDOW SIZE = ',num2str(miWindowSize)]);
+    for i=1:numel(dirs)-2
+      disp('>---------------------------------------------------------------');
+      tic;
+      % Load patient data
+      o=load([wpath,'/',dirs{i},'/PatientData.mat']);
+      p=o.obj;
+      disp(['Processing data from ',p.name,'...']);
 
-    % Create report folder for PATIENT
-    if (~exist([reportPath,dirs{i}],'dir'))
-      mkdir([reportPath,dirs{i}]);
-    end
-
-    % Processing
-    sigNum=size(p.signalsAll,1);
-    sIdx=1:sigNum;
-    seizuresSigIdx=[];
-    for n=sIdx
-      if (p.signalsAll{n,4}>0)
-        seizuresSigIdx=[seizuresSigIdx,n];
+      % Create report folder for PATIENT
+      if (~exist([reportwpath,dirs{i}],'dir'))
+        mkdir([reportwpath,dirs{i}]);
       end
-    end
-    sIdx=1;
-    mi=[];
-    for k=seizuresSigIdx
-      if (sIdx>1)
-        % Check for non-overlapping current preseizure with previous parts in
-        % 4 hours window
-        if((p.signalsAll{k,2}-p.signalsAll{seizuresSigIdx(sIdx-1),2})>14400 && ...
-            p.signalsAll{k,2}>14400 && (k-seizuresSigIdx(sIdx-1))>1)
-          % load signal with seizure for proccessing
-          disp(['Loading signal with seizure ',p.signalsAll{k,1},'...']);
-          s=loadRecord(path,[dirs{i},'/',p.signalsAll{k,1}],subjectInfoFileName,...
-            1,1,1);
-          sStartTime=s.seizureTimings(1,1);
-          sDuration=s.seizureTimings(1,2)-sStartTime; % Seizure duration, seconds
-          ia=informationAnalysis(s);
-          % Calculate MI during the seizure and right before the seizure
-          sigIdxBuf=p.signalsAll{k,5}(1:p.minChNum);
-%           sigIdxBuf=sigIdxBuf(sigIdxBuf<=p.minChNum);
-          mi_Seizure=ia.windowedShortTimeMi(s,sigIdxBuf,sStartTime,sDuration,miWindowSize);
-          mi_PreSeizure=ia.windowedShortTimeMi(s,sigIdxBuf,(sStartTime-sDuration),sDuration, ...
-            miWindowSize);
 
-          absStartTime=sStartTime+p.signalsAll{k,2};
-          % 1 Hour before the seizure
-          startTime=absStartTime-3600;
-          n=1;
-          while (p.signalsAll{n,2}<startTime && n<sigNum)
-            n=n+1;
-          end
-          idxPrev=k;
-          if (n<=sigNum)
-            idx=n-1;
-          else
-            idx=sigNum;
-          end
-          if (idx~=idxPrev)
-            disp(['1H: Loading ',p.signalsAll{idx,1},'...']);
-            s=loadRecord(path,[dirs{i},'/',p.signalsAll{idx,1}],subjectInfoFileName,...
-              1,1,1);
-          else
-            disp(['1H: Loaded from ',p.signalsAll{idx,1},'.']);
-          end
-          startTime=startTime-p.signalsAll{idx,2};
-          if (startTime+sDuration-s.records>11)
-            continue
-          end
-          if (startTime+sDuration>s.records)
-            startTime=s.records-sDuration-miWindowSize-1;
-          end
-          sigIdxBuf=p.signalsAll{idx,5}(1:p.minChNum);
-          mi_1H_PreSeizure=ia.windowedShortTimeMi(s,sigIdxBuf,startTime,sDuration,miWindowSize);
-          % 2 Hours before the seizure
-          startTime=absStartTime-7200;
-          n=1;
-          while (p.signalsAll{n,2}<startTime && n<sigNum)
-            n=n+1;
-          end
-          idxPrev=idx;
-          if (n<=sigNum)
-            idx=n-1;
-          else
-            idx=sigNum;
-          end
-          if (idx~=idxPrev)
-            disp(['2H: Loading ',p.signalsAll{idx,1},'...']);
-            s=loadRecord(path,[dirs{i},'/',p.signalsAll{idx,1}],subjectInfoFileName,...
-              1,1,1);
-          else
-            disp(['2H: Loaded from ',p.signalsAll{idx,1},'.']);
-          end
-          startTime=startTime-p.signalsAll{idx,2};
-          if (startTime+sDuration-s.records>11)
-            continue
-          end
-          if (startTime+sDuration>s.records)
-            startTime=s.records-sDuration-miWindowSize-1;
-          end
-          sigIdxBuf=p.signalsAll{idx,5}(1:p.minChNum);
-          mi_2H_PreSeizure=ia.windowedShortTimeMi(s,sigIdxBuf,startTime,sDuration,miWindowSize);
-          % 3 Hours before the seizure
-          startTime=absStartTime-10800;
-          n=1;
-          while (p.signalsAll{n,2}<startTime && n<sigNum)
-            n=n+1;
-          end
-          idxPrev=idx;
-          if (n<=sigNum)
-            idx=n-1;
-          else
-            idx=sigNum;
-          end
-          if (idx~=idxPrev)
-            disp(['3H: Loading ',p.signalsAll{idx,1},'...']);
-            s=loadRecord(path,[dirs{i},'/',p.signalsAll{idx,1}],subjectInfoFileName,...
-              1,1,1);
-          else
-            disp(['3H: Loaded from ',p.signalsAll{idx,1},'.']);
-          end
-          startTime=startTime-p.signalsAll{idx,2};
-          if (startTime+sDuration-s.records>11)
-            continue
-          end
-          if (startTime+sDuration>s.records)
-            startTime=s.records-sDuration-miWindowSize-1;
-          end
-          sigIdxBuf=p.signalsAll{idx,5}(1:p.minChNum);
-          mi_3H_PreSeizure=ia.windowedShortTimeMi(s,sigIdxBuf,startTime,sDuration,miWindowSize);
-          % 4 Hours before the seizure
-          startTime=absStartTime-14400;
-          n=1;
-          while (p.signalsAll{n,2}<startTime && n<sigNum)
-            n=n+1;
-          end
-          idxPrev=idx;
-          if (n<=sigNum)
-            idx=n-1;
-          else
-            idx=sigNum;
-          end
-          if (idx~=idxPrev)
-            disp(['4H: Loading ',p.signalsAll{idx,1},'...']);
-            s=loadRecord(path,[dirs{i},'/',p.signalsAll{idx,1}],subjectInfoFileName,...
-              1,1,1);
-          else
-            disp(['4H: Loaded from ',p.signalsAll{idx,1},'.']);
-          end
-          startTime=startTime-p.signalsAll{idx,2};
-          if (startTime+sDuration-s.records>11)
-            continue
-          end
-          if (startTime+sDuration>s.records)
-            startTime=s.records-sDuration-miWindowSize-1;
-          end
-          sigIdxBuf=p.signalsAll{idx,5}(1:p.minChNum);
-          mi_4H_PreSeizure=ia.windowedShortTimeMi(s,sigIdxBuf,startTime,sDuration,miWindowSize);
-
-          % Plot results for current SEIZURE
-          f=figure('Visible','Off');
-          boxplot([mi_4H_PreSeizure(:,1),mi_3H_PreSeizure(:,1),mi_2H_PreSeizure(:,1), ...
-            mi_1H_PreSeizure(:,1),mi_PreSeizure(:,1),mi_Seizure(:,1)], ...
-            {'4 Hours','3 Hours','2 Hours','1 Hour','Pre-seizure','Seizure'});
-          ylabel('MI');
-          title({'Mutual information',['Seizure duration: ',num2str(sDuration),...
-            ', MI Win. size: ',num2str(miWindowSize),'s']});
-          grid on;
-          savePlot2File(f,'png',[reportPath,'/',dirs{i},'/'],['MI_Sz',num2str(sIdx),'_win', ...
-            num2str(miWindowSize)]);
-          savePlot2File(f,'fig',[reportPath,'/',dirs{i},'/'],['MI_Sz',num2str(sIdx),'_win', ...
-            num2str(miWindowSize)]);
-
-          % Store calculated data
-          mi=[mi;mi_4H_PreSeizure,mi_3H_PreSeizure,mi_2H_PreSeizure,mi_1H_PreSeizure, ... 
-            mi_PreSeizure,mi_Seizure];
-          saveWrapper([reportPath,'/',dirs{i},'/','MI_Sz',num2str(sIdx),'_win', ...
-            num2str(miWindowSize),'.mat'], ...
-            mi_4H_PreSeizure,mi_3H_PreSeizure,mi_2H_PreSeizure, ...
-            mi_1H_PreSeizure,mi_PreSeizure,mi_Seizure);
-        end
-      else
-        if(p.signalsAll{k,2}>14400)
-          % load signal with seizure for proccessing
-          disp(['Loading signal with seizure ',p.signalsAll{k,1},'...']);
-          s=loadRecord(path,[dirs{i},'/',p.signalsAll{k,1}],subjectInfoFileName,...
-            1,1,1);
-          sStartTime=s.seizureTimings(1,1);
-          sDuration=s.seizureTimings(1,2)-sStartTime; % Seizure duration, seconds
-          ia=informationAnalysis(s);
-          % Calculate MI during the seizure and right before the seizure
-          sigIdxBuf=p.signalsAll{k,5}(1:p.minChNum);
-          mi_Seizure=ia.windowedShortTimeMi(s,sigIdxBuf,sStartTime,sDuration,miWindowSize);
-          mi_PreSeizure=ia.windowedShortTimeMi(s,sigIdxBuf,(sStartTime-sDuration),sDuration, ...
-            miWindowSize);
-
-          absStartTime=sStartTime+p.signalsAll{k,2};
-          % 1 Hour before the seizure
-          startTime=absStartTime-3600;
-          n=1;
-          while (p.signalsAll{n,2}<startTime && n<sigNum)
-            n=n+1;
-          end
-          idxPrev=k;
-          if (n<=sigNum)
-            idx=n-1;
-          else
-            idx=sigNum;
-          end
-          if (idx~=idxPrev)
-            disp(['1H: Loading ',p.signalsAll{idx,1},'...']);
-            s=loadRecord(path,[dirs{i},'/',p.signalsAll{idx,1}],subjectInfoFileName,...
-              1,1,1);
-          else
-            disp(['1H: Loaded from ',p.signalsAll{idx,1},'.']);
-          end
-          startTime=startTime-p.signalsAll{idx,2};
-          if (startTime+sDuration-s.records>11)
-            continue
-          end
-          if (startTime+sDuration>s.records)
-            startTime=s.records-sDuration-miWindowSize-1;
-          end
-          sigIdxBuf=p.signalsAll{idx,5}(1:p.minChNum);
-          mi_1H_PreSeizure=ia.windowedShortTimeMi(s,sigIdxBuf,startTime,sDuration,miWindowSize);
-          % 2 Hours before the seizure
-          startTime=absStartTime-7200;
-          n=1;
-          while (p.signalsAll{n,2}<startTime && n<sigNum)
-            n=n+1;
-          end
-          idxPrev=idx;
-          if (n<=sigNum)
-            idx=n-1;
-          else
-            idx=sigNum;
-          end
-          if (idx~=idxPrev)
-            disp(['2H: Loading ',p.signalsAll{idx,1},'...']);
-            s=loadRecord(path,[dirs{i},'/',p.signalsAll{idx,1}],subjectInfoFileName,...
-              1,1,1);
-          else
-            disp(['2H: Loaded from ',p.signalsAll{idx,1},'.']);
-          end
-          startTime=startTime-p.signalsAll{idx,2};
-          if (startTime+sDuration-s.records>11)
-            continue
-          end
-          if (startTime+sDuration>s.records)
-            startTime=s.records-sDuration-miWindowSize-1;
-          end
-          sigIdxBuf=p.signalsAll{idx,5}(1:p.minChNum);
-          mi_2H_PreSeizure=ia.windowedShortTimeMi(s,sigIdxBuf,startTime,sDuration,miWindowSize);
-          % 3 Hours before the seizure
-          startTime=absStartTime-10800;
-          n=1;
-          while (p.signalsAll{n,2}<startTime && n<sigNum)
-            n=n+1;
-          end
-          idxPrev=idx;
-          if (n<=sigNum)
-            idx=n-1;
-          else
-            idx=sigNum;
-          end
-          if (idx~=idxPrev)
-            disp(['3H: Loading ',p.signalsAll{idx,1},'...']);
-            s=loadRecord(path,[dirs{i},'/',p.signalsAll{idx,1}],subjectInfoFileName,...
-              1,1,1);
-          else
-            disp(['3H: Loaded from ',p.signalsAll{idx,1},'.']);
-          end
-          startTime=startTime-p.signalsAll{idx,2};
-          if (startTime+sDuration-s.records>11)
-            continue
-          end
-          if (startTime+sDuration>s.records)
-            startTime=s.records-sDuration-miWindowSize-1;
-          end
-          sigIdxBuf=p.signalsAll{idx,5}(1:p.minChNum);
-          mi_3H_PreSeizure=ia.windowedShortTimeMi(s,sigIdxBuf,startTime,sDuration,miWindowSize);
-          % 4 Hours before the seizure
-          startTime=absStartTime-14400;
-          n=1;
-          while (p.signalsAll{n,2}<startTime && n<sigNum)
-            n=n+1;
-          end
-          idxPrev=idx;
-          if (n<=sigNum)
-            idx=n-1;
-          else
-            idx=sigNum;
-          end
-          if (idx~=idxPrev)
-            disp(['4H: Loading ',p.signalsAll{idx,1},'...']);
-            s=loadRecord(path,[dirs{i},'/',p.signalsAll{idx,1}],subjectInfoFileName,...
-              1,1,1);
-          else
-            disp(['4H: Loaded from ',p.signalsAll{idx,1},'.']);
-          end
-          startTime=startTime-p.signalsAll{idx,2};
-          if (startTime+sDuration-s.records>11)
-            continue
-          end
-          if (startTime+sDuration>s.records)
-            startTime=s.records-sDuration-miWindowSize-1;
-          end
-          sigIdxBuf=p.signalsAll{idx,5}(1:p.minChNum);
-          mi_4H_PreSeizure=ia.windowedShortTimeMi(s,sigIdxBuf,startTime,sDuration,miWindowSize);
-
-          % Plot results for current SEIZURE
-          f=figure('Visible','Off');
-          boxplot([mi_4H_PreSeizure(:,1),mi_3H_PreSeizure(:,1),mi_2H_PreSeizure(:,1), ...
-            mi_1H_PreSeizure(:,1),mi_PreSeizure(:,1),mi_Seizure(:,1)], ...
-            {'4 Hours','3 Hours','2 Hours','1 Hour','Pre-seizure','Seizure'});
-          ylabel('MI');
-          title({'Mutual information',['Seizure duration: ',num2str(sDuration),...
-            ', MI Win. size: ',num2str(miWindowSize),'s']});
-          grid on;
-          savePlot2File(f,'png',[reportPath,'/',dirs{i},'/'],['MI_Sz',num2str(sIdx),'_win', ...
-            num2str(miWindowSize)]);
-          savePlot2File(f,'fig',[reportPath,'/',dirs{i},'/'],['MI_Sz',num2str(sIdx),'_win', ...
-            num2str(miWindowSize)]);
-
-          % Store calculated data
-          mi=[mi;mi_4H_PreSeizure,mi_3H_PreSeizure,mi_2H_PreSeizure,mi_1H_PreSeizure, ... 
-            mi_PreSeizure,mi_Seizure];
-          saveWrapper([reportPath,'/',dirs{i},'/','MI_Sz',num2str(sIdx),'_win', ...
-            num2str(miWindowSize),'.mat'], ...
-            mi_4H_PreSeizure,mi_3H_PreSeizure,mi_2H_PreSeizure, ...
-            mi_1H_PreSeizure,mi_PreSeizure,mi_Seizure);
+      % Processing
+      sigNum=size(p.signalsAll,1);
+      sIdx=1:sigNum;
+      seizuresSigIdx=[];
+      for n=sIdx
+        if (p.signalsAll{n,4}>0)
+          seizuresSigIdx=[seizuresSigIdx,n];
         end
       end
-      sIdx=sIdx+1;
+      sIdx=1;
+      mi=[];
+      prevSeizureStartTime=0;
+      miAllSz=cell(numel(seizuresSigIdx),1);
+      for k=seizuresSigIdx
+        % Load signal with seizure for proccessing
+        disp(['Loading signal with seizure ',p.signalsAll{k,1},'...']);
+        s=loadRecord(wpath,[dirs{i},'/',p.signalsAll{k,1}],subjectInfoFileName,...
+          1,1,1);
+        sStartTime=s.seizureTimings(1,1);
+        sDuration=s.seizureTimings(1,2)-sStartTime; % Seizure duration, seconds
+        ia=informationAnalysis(s);
+        % Calculate MI during the seizure and right before the seizure
+        sigIdxBuf=p.signalsAll{k,5}(1:p.minChNum);
+        % Calculate number of interconnected channels
+        tmp=numel(sigIdxBuf)-1;
+        miChNum=0;
+        while tmp>0
+          miChNum=miChNum+tmp;
+          tmp=tmp-1;
+        end     
+        mi=zeros(miChNum,numel(shiftBuf)+2);
+        miSur=zeros(miChNum,numel(shiftBuf)+2);
+        [mi(:,end),miSur(:,end),miLabels]=ia.windowedShortTimeMi(s,sigIdxBuf,sStartTime,sDuration,miWindowSize);
+        [mi(:,end-1),miSur(:,end-1),~]=ia.windowedShortTimeMi(s,sigIdxBuf,(sStartTime-sDuration),sDuration, ...
+          miWindowSize);
+
+        % Calculating MI with shifts back before seizure
+        tmp=numel(shiftBuf);
+        idxPrev=k;
+        absStartTime=sStartTime+p.signalsAll{k,2};
+        while tmp>0
+          startTime=absStartTime-shiftBuf(tmp);
+          if (startTime > prevSeizureStartTime)
+            [mi(:,tmp),miSur(:,tmp),~,s,idxPrev]=calcShiftedMi(ia,s,p,startTime,sDuration, ...
+              miWindowSize,idxPrev,wpath,dirs{i},subjectInfoFileName);         
+          else
+            break;
+          end
+          tmp=tmp-1;
+        end   
+        prevSeizureStartTime=absStartTime;
+
+        % Plot results for current SEIZURE
+        f=figure('Visible','Off');
+        set(f,'PaperPositionMode','auto');
+        set(f, 'Position', [0 100 1350 400]);
+        set(f,'DefaultAxesLooseInset',[0,0,0,0]);
+        boxplot(mi,shiftLabels);
+        ylabel('MI');
+        title({'Mutual information',['Seizure ',num2str(sIdx),' at ',num2str(absStartTime),...
+          's, duration: ',num2str(sDuration),'s, MI Win. size: ',num2str(miWindowSize),'s']});
+        grid on;
+        savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'],['MI_Sz',num2str(sIdx),'_win', ...
+          num2str(miWindowSize)]);
+        savePlot2File(f,'fig',[reportwpath,'/',dirs{i},'/'],['MI_Sz',num2str(sIdx),'_win', ...
+          num2str(miWindowSize)]);
+
+        % Store calculated data
+        saveWrapper([reportwpath,'/',dirs{i},'/','MI_Sz',num2str(sIdx),'_win', ...
+          num2str(miWindowSize),'.mat'],mi,miSur);
+        miAllSz{sIdx}=mi;
+        sIdx=sIdx+1;
+      end
+      cntBuf=zeros(size(seizuresSigIdx));
+      if (size(miAllSz,1)>0 && size(miAllSz,2)>0)
+        miAv=zeros(size(mi));
+        for m=1:size(miAv,2)
+          cnt=0;
+          for n=1:numel(seizuresSigIdx)
+            if (miAllSz{n}(1,m) ~= 0)
+              miAv(:,m)=miAv(:,m)+miAllSz{n}(:,m);
+              cnt=cnt+1;
+            end
+          end
+          miAv(:,m)=miAv(:,m)/cnt;
+          cntBuf(m)=cnt;
+        end
+        % Plot results for current PATIENT
+        f=figure('Visible','Off');
+        set(f,'PaperPositionMode','auto');
+        set(f, 'Position', [0 100 1350 400]);
+        set(f,'DefaultAxesLooseInset',[0,0,0,0]);
+        boxplot(miAv,shiftLabels);
+        ylabel('MI');
+        title({'Mutual information',['All seizures, MI Win. size: ', ...
+          num2str(miWindowSize),'s']});
+        grid on;
+        savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'],['MI_AllSz','_win',num2str(miWindowSize)]);
+        savePlot2File(f,'fig',[reportwpath,'/',dirs{i},'/'],['MI_AllSz','_win',num2str(miWindowSize)]);
+        saveWrapper([reportwpath,'/',dirs{i},'/MI_Total_win',num2str(miWindowSize),'.mat'],mi,miSur);
+             
+        f=figure('Visible','Off');
+        set(f,'PaperPositionMode','auto');
+        set(f,'Position', [0 100 1350 400]);
+        set(f,'DefaultAxesLooseInset',[0,0,0,0]);
+        bar(cntBuf);
+        set(gca,'XTickLabel',shiftLabels,'XTick',1:numel(shiftLabels));
+        title('Number of probes in averaging in av.MI for patient');
+        grid on;
+        savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'],['MI_AllSzCnt','_win',num2str(miWindowSize)]);
+        savePlot2File(f,'fig',[reportwpath,'/',dirs{i},'/'],['MI_AllSzCnt','_win',num2str(miWindowSize)]);
+        
+        disp(['Elapsed time: ',num2str(toc),' s']);
+      end
+      close all;
     end
-    if (size(mi,1)>0 && size(mi,2)>0)
-      % Plot results for current PATIENT
-      f=figure('Visible','Off');
-      boxplot([mi(:,1),mi(:,3),mi(:,5),mi(:,7),mi(:,9),mi(:,11)], ...
-        {'4 Hours','3 Hours','2 Hours','1 Hour','Pre-seizure','Seizure'});
-      ylabel('MI');
-      title({'Mutual information',['All seizures, MI Win. size: ', ...
-        num2str(miWindowSize),'s']});
-      grid on;
-      savePlot2File(f,'png',[reportPath,'/',dirs{i},'/'],['MI_AllSz','_win',num2str(miWindowSize)]);
-      savePlot2File(f,'fig',[reportPath,'/',dirs{i},'/'],['MI_AllSz','_win',num2str(miWindowSize)]);
-      saveWrapper([reportPath,'/',dirs{i},'/MI_Total_win',num2str(miWindowSize),'.mat'],mi);
-      disp(['Elapsed time: ',num2str(toc),' s']);
-    end
-    close all;
+  end
+  if (parallelFlag>0)
+    delete(gcp);
   end
 end
-if (parallelFlag>0)
-  delete(gcp);
+
+function [mi,miSur,miLabels,s,idxPrev]=calcShiftedMi(ia,s,p,startTime,sDuration, ...
+  miWindowSize,idxPrev,wpath,pdir,subjectInfoFileName)
+  % Calculate number of interconnected channels
+  tmp=p.minChNum-1;
+  miChNum=0;
+  while tmp>0
+    miChNum=miChNum+tmp;
+    tmp=tmp-1;
+  end     
+  mi=zeros(miChNum,1);
+  miSur=zeros(miChNum,1);
+  miLabels=[];
+  n=1;
+  while (p.signalsAll{n,2}<startTime && n<size(p.signalsAll,1))
+    n=n+1;
+  end
+  sigNum=size(p.signalsAll,1);
+  if (n<=sigNum)
+    idx=n-1;
+  else
+    idx=sigNum;
+  end
+  disp(['Processing ',pdir,'/',p.signalsAll{idx,1}]);
+  if (idx~=idxPrev)
+    s=loadRecord(wpath,[pdir,'/',p.signalsAll{idx,1}],subjectInfoFileName,...
+      1,1,1);
+  end
+  startTime=startTime-p.signalsAll{idx,2};
+  if (startTime+sDuration-s.records<11)
+    if (startTime+sDuration>s.records)
+      startTime=s.records-sDuration-miWindowSize-1;
+    end
+    sigIdxBuf=p.signalsAll{idx,5}(1:p.minChNum);
+    [mi,miSur,miLabels]=ia.windowedShortTimeMi(s,sigIdxBuf,startTime,sDuration,miWindowSize);
+  end
+  idxPrev=idx;
 end

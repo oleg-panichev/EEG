@@ -240,7 +240,11 @@ classdef informationAnalysis < handle
     % sStartTime - analysis start time, s
     % sDuration - number of seconds to analyze, s
     % miWindowSize - window size for MI estimation, s
-    function [miAvBuf,miLabels]=windowedShortTimeMi(obj,s,sigIdxBuf,sStartTime, ...
+    % Output:
+    % miAvBuf - average MI for each channels pair
+    % miAvSurBuf - average surrogate MI for each channels pair 
+    % miLabels - channels pairs labels
+    function [miAvBuf,miAvSurBuf,miLabels]=windowedShortTimeMi(obj,s,sigIdxBuf,sStartTime, ...
         sDuration,miWindowSize)   
       disp(['Start time: ',num2str(sStartTime),'s, Duration: ',num2str(sDuration),'s']);
       chIdx=1;  
@@ -259,7 +263,8 @@ classdef informationAnalysis < handle
       halfWinSz=round(miWindowSize*s.eegFs/2);
       samplesBuf=(sStartTime*s.eegFs+halfWinSz+1):(s.eegFs/obj.miFs) ...
               :((sStartTime+sDuration)*s.eegFs-halfWinSz);
-      miAvBuf=zeros(obj.miChNum,2);
+      miAvBuf=zeros(obj.miChNum,1);
+      miAvSurBuf=zeros(obj.miChNum,1);
       miBuf=zeros(obj.miChNum,numel(samplesBuf)); 
       miSurBuf=zeros(obj.miChNum,numel(samplesBuf)); 
       for k=sigIdxBuf
@@ -281,8 +286,8 @@ classdef informationAnalysis < handle
           obj.miLabels{chIdx}=([s.label{k},'-',s.label{j}]);
           
           % Store averaged MI and other info 
-          miAvBuf(chIdx,1)=mean(miBuf(chIdx,:));
-          miAvBuf(chIdx,2)=mean(miSurBuf(chIdx,:));
+          miAvBuf(chIdx)=mean(miBuf(chIdx,:));
+          miAvSurBuf(chIdx)=mean(miSurBuf(chIdx,:));
           
           chIdx=chIdx+1;
         end

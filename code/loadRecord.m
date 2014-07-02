@@ -1,8 +1,8 @@
 % Load record from file
 %
-function [s]=loadRecord(path,fileName,subjectInfoFileName,...
+function [s]=loadRecord(wpath,fileName,subjectInfoFileName,...
     loadRecordFl,loadPatientInfoFl,loadSeizuresAnnotationFl)
-  fullFileName=strcat(path,fileName);
+  fullFileName=strcat(wpath,fileName);
   if (iscell(fullFileName))
     fullFileName=[fullFileName{1}];
   end
@@ -13,7 +13,7 @@ function [s]=loadRecord(path,fileName,subjectInfoFileName,...
       loadFromEdf(s,fullFileName);
     end
     if (loadPatientInfoFl>0)  
-      loadPatientInfo(s,path,fileName,subjectInfoFileName);
+      loadPatientInfo(s,wpath,fileName,subjectInfoFileName);
     end
     if (loadSeizuresAnnotationFl>0)
       loadSeizuresAnnotation(s,fullFileName);
