@@ -242,13 +242,15 @@ classdef informationAnalysis < handle
     % miWindowSize - window size for MI estimation, s
     % Output:
     % miAvBuf - average MI for each channels pair
+    % miVarBuf - variance of MI for each channel pair
     % miAvSurBuf - average surrogate MI for each channels pair 
+    % miAvSurBuf - variance of surrogate MI for each channels pair 
     % miLabels - channels pairs labels
-    function [miAvBuf,miAvSurBuf,miLabels]=windowedShortTimeMi(obj,s,sigIdxBuf,sStartTime, ...
+    function [miAvBuf,miVarBuf,miAvSurBuf,miVarSurBuf,miLabels]=windowedShortTimeMi(obj,s,sigIdxBuf,sStartTime, ...
         sDuration,miWindowSize)   
       disp(['Start time: ',num2str(sStartTime),'s, Duration: ',num2str(sDuration),'s']);
       chIdx=1;  
-      obj.miFs=round(miWindowSize/2);
+      obj.miFs=miWindowSize/2;
          
       % Calculate number of interconnected channels
       i=numel(sigIdxBuf)-1;
@@ -261,12 +263,15 @@ classdef informationAnalysis < handle
       % Calculate MI for all channels
       disp('Calculating mutual information...');
       halfWinSz=round(miWindowSize*s.eegFs/2);
-      samplesBuf=(sStartTime*s.eegFs+halfWinSz+1):(s.eegFs/obj.miFs) ...
-              :((sStartTime+sDuration)*s.eegFs-halfWinSz);
+      samplesBuf=(sStartTime*s.eegFs+halfWinSz+1):round(s.eegFs*obj.miFs): ...
+              ((sStartTime+sDuration)*s.eegFs-halfWinSz);
       miAvBuf=zeros(obj.miChNum,1);
+      miVarBuf=zeros(obj.miChNum,1);
       miAvSurBuf=zeros(obj.miChNum,1);
+      miVarSurBuf=zeros(obj.miChNum,1); 
       miBuf=zeros(obj.miChNum,numel(samplesBuf)); 
       miSurBuf=zeros(obj.miChNum,numel(samplesBuf)); 
+      
       for k=sigIdxBuf
 %         disp(['Channel #',num2str(k),'...']);
         for j=sigIdxBuf(sigIdxBuf>k)
@@ -287,7 +292,9 @@ classdef informationAnalysis < handle
           
           % Store averaged MI and other info 
           miAvBuf(chIdx)=mean(miBuf(chIdx,:));
+          miVarBuf(chIdx)=var(miBuf(chIdx,:));
           miAvSurBuf(chIdx)=mean(miSurBuf(chIdx,:));
+          miVarSurBuf(chIdx)=var(miSurBuf(chIdx,:));
           
           chIdx=chIdx+1;
         end

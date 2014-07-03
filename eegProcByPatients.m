@@ -6,7 +6,7 @@ function eegProcByPatients()
   wpath='eeg_data/chbmit_mat/'; % Directory containing db
   % 'eeg_data/physionet.org/physiobank/database/chbmit/'
   % 'eeg_data/chbmit_mat/'
-  reportwpath='reports_by_patient/';
+  reportwpath='reports_10sec_win/';
   % 'RECORDS'
   % 'RECORDS-WITH-SEIZURES'
   subjectInfoFileName='SUBJECT-INFO'; % Name of the file that contains info about patients
@@ -35,7 +35,7 @@ function eegProcByPatients()
   for miIdx=1:numel(windowSizesBuf)
     miWindowSize=windowSizesBuf(miIdx);
     disp(['MI WINDOW SIZE = ',num2str(miWindowSize)]);
-    for i=1:numel(dirs)-2
+    for i=1:numel(dirs)-1
       disp('>---------------------------------------------------------------');
       tic;
       % Load patient data
@@ -61,13 +61,15 @@ function eegProcByPatients()
       mi=[];
       prevSeizureStartTime=0;
       miAllSz=cell(numel(seizuresSigIdx),1);
+      miVarAllSz=cell(numel(seizuresSigIdx),1);
+      miDiffAllSz=cell(numel(seizuresSigIdx),1);
       for k=seizuresSigIdx
         % Load signal with seizure for proccessing
         disp(['Loading signal with seizure ',p.signalsAll{k,1},'...']);
         s=loadRecord(wpath,[dirs{i},'/',p.signalsAll{k,1}],subjectInfoFileName,...
           1,1,1);
         sStartTime=s.seizureTimings(1,1);
-        sDuration=s.seizureTimings(1,2)-sStartTime; % Seizure duration, seconds
+        sDuration=10;%s.seizureTimings(1,2)-sStartTime; % Seizure duration, seconds
         ia=informationAnalysis(s);
         % Calculate MI during the seizure and right before the seizure
         sigIdxBuf=p.signalsAll{k,5}(1:p.minChNum);
@@ -77,11 +79,13 @@ function eegProcByPatients()
         while tmp>0
           miChNum=miChNum+tmp;
           tmp=tmp-1;
-        end     
+        end    
         mi=zeros(miChNum,numel(shiftBuf)+2);
+        miVar=zeros(miChNum,numel(shiftBuf)+2);
         miSur=zeros(miChNum,numel(shiftBuf)+2);
-        [mi(:,end),miSur(:,end),miLabels]=ia.windowedShortTimeMi(s,sigIdxBuf,sStartTime,sDuration,miWindowSize);
-        [mi(:,end-1),miSur(:,end-1),~]=ia.windowedShortTimeMi(s,sigIdxBuf,(sStartTime-sDuration),sDuration, ...
+        miVarSur=zeros(miChNum,numel(shiftBuf)+2);
+        [mi(:,end),miVar(:,end),miSur(:,end),miVarSur(:,end),miLabels]=ia.windowedShortTimeMi(s,sigIdxBuf,sStartTime,sDuration,miWindowSize);
+        [mi(:,end-1),miVar(:,end-1),miSur(:,end-1),miVarSur(:,end-1),~]=ia.windowedShortTimeMi(s,sigIdxBuf,(sStartTime-sDuration),sDuration, ...
           miWindowSize);
 
         % Calculating MI with shifts back before seizure
@@ -91,7 +95,7 @@ function eegProcByPatients()
         while tmp>0
           startTime=absStartTime-shiftBuf(tmp);
           if (startTime > prevSeizureStartTime)
-            [mi(:,tmp),miSur(:,tmp),~,s,idxPrev]=calcShiftedMi(ia,s,p,startTime,sDuration, ...
+            [mi(:,tmp),miVar(:,tmp),miSur(:,tmp),miVarSur(:,tmp),~,s,idxPrev]=calcShiftedMi(ia,s,p,startTime,sDuration, ...
               miWindowSize,idxPrev,wpath,dirs{i},subjectInfoFileName);         
           else
             break;
@@ -99,6 +103,8 @@ function eegProcByPatients()
           tmp=tmp-1;
         end   
         prevSeizureStartTime=absStartTime;
+        miDiff=zeros(size(mi));
+        miDiff(:,2:end)=abs(diff(mi,1,2));
 
         % Plot results for current SEIZURE
         f=figure('Visible','Off');
@@ -110,29 +116,64 @@ function eegProcByPatients()
         title({'Mutual information',['Seizure ',num2str(sIdx),' at ',num2str(absStartTime),...
           's, duration: ',num2str(sDuration),'s, MI Win. size: ',num2str(miWindowSize),'s']});
         grid on;
-        savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'],['MI_Sz',num2str(sIdx),'_win', ...
+        savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'],['Mi_Sz',num2str(sIdx),'_win', ...
           num2str(miWindowSize)]);
-        savePlot2File(f,'fig',[reportwpath,'/',dirs{i},'/'],['MI_Sz',num2str(sIdx),'_win', ...
+        savePlot2File(f,'fig',[reportwpath,'/',dirs{i},'/'],['Mi_Sz',num2str(sIdx),'_win', ...
+          num2str(miWindowSize)]);
+        
+        f=figure('Visible','Off');
+        set(f,'PaperPositionMode','auto');
+        set(f, 'Position', [0 100 1350 400]);
+        set(f,'DefaultAxesLooseInset',[0,0,0,0]);
+        boxplot(miVar,shiftLabels);
+        ylabel('MI');
+        title({'Mutual information variance',['Seizure ',num2str(sIdx),' at ',num2str(absStartTime),...
+          's, duration: ',num2str(sDuration),'s, MI Win. size: ',num2str(miWindowSize),'s']});
+        grid on;
+        savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'],['MiVar_Sz',num2str(sIdx),'_win', ...
+          num2str(miWindowSize)]);
+        savePlot2File(f,'fig',[reportwpath,'/',dirs{i},'/'],['MiVar_Sz',num2str(sIdx),'_win', ...
+          num2str(miWindowSize)]);
+        
+        f=figure('Visible','Off');
+        set(f,'PaperPositionMode','auto');
+        set(f, 'Position', [0 100 1350 400]);
+        set(f,'DefaultAxesLooseInset',[0,0,0,0]);
+        boxplot(miDiff,shiftLabels);
+        ylabel('MI');
+        title({'Mutual information diff',['Seizure ',num2str(sIdx),' at ',num2str(absStartTime),...
+          's, duration: ',num2str(sDuration),'s, MI Win. size: ',num2str(miWindowSize),'s']});
+        grid on;
+        savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'],['MiDiff_Sz',num2str(sIdx),'_win', ...
+          num2str(miWindowSize)]);
+        savePlot2File(f,'fig',[reportwpath,'/',dirs{i},'/'],['MiDiff_Sz',num2str(sIdx),'_win', ...
           num2str(miWindowSize)]);
 
         % Store calculated data
         saveWrapper([reportwpath,'/',dirs{i},'/','MI_Sz',num2str(sIdx),'_win', ...
-          num2str(miWindowSize),'.mat'],mi,miSur);
+          num2str(miWindowSize),'.mat'],mi,miVar,miSur,miVarSur,miDiff);
         miAllSz{sIdx}=mi;
+        miVarAllSz{sIdx}=miVar;
+        miDiffAllSz{sIdx}=miDiff;
         sIdx=sIdx+1;
       end
       cntBuf=zeros(size(seizuresSigIdx));
       if (size(miAllSz,1)>0 && size(miAllSz,2)>0)
         miAv=zeros(size(mi));
+        miVarAv=zeros(size(mi));
+        miDiffAv=zeros(size(mi));
         for m=1:size(miAv,2)
           cnt=0;
           for n=1:numel(seizuresSigIdx)
             if (miAllSz{n}(1,m) ~= 0)
               miAv(:,m)=miAv(:,m)+miAllSz{n}(:,m);
+              miVarAv(:,m)=miVarAv(:,m)+miVarAllSz{n}(:,m);
+              miDiffAv(:,m)=miDiffAv(:,m)+miVarAllSz{n}(:,m);
               cnt=cnt+1;
             end
           end
           miAv(:,m)=miAv(:,m)/cnt;
+          miVarAv(:,m)=miVarAv(:,m)/cnt;
           cntBuf(m)=cnt;
         end
         % Plot results for current PATIENT
@@ -145,9 +186,34 @@ function eegProcByPatients()
         title({'Mutual information',['All seizures, MI Win. size: ', ...
           num2str(miWindowSize),'s']});
         grid on;
-        savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'],['MI_AllSz','_win',num2str(miWindowSize)]);
-        savePlot2File(f,'fig',[reportwpath,'/',dirs{i},'/'],['MI_AllSz','_win',num2str(miWindowSize)]);
-        saveWrapper([reportwpath,'/',dirs{i},'/MI_Total_win',num2str(miWindowSize),'.mat'],mi,miSur);
+        savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'],['Mi_AllSz','_win',num2str(miWindowSize)]);
+        savePlot2File(f,'fig',[reportwpath,'/',dirs{i},'/'],['Mi_AllSz','_win',num2str(miWindowSize)]);
+        
+        f=figure('Visible','Off');
+        set(f,'PaperPositionMode','auto');
+        set(f, 'Position', [0 100 1350 400]);
+        set(f,'DefaultAxesLooseInset',[0,0,0,0]);
+        boxplot(miVarAv,shiftLabels);
+        ylabel('MI');
+        title({'Mutual information variance',['All seizures, MI Win. size: ', ...
+          num2str(miWindowSize),'s']});
+        grid on;
+        savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'],['MiVar_AllSz','_win',num2str(miWindowSize)]);
+        savePlot2File(f,'fig',[reportwpath,'/',dirs{i},'/'],['MiVar_AllSz','_win',num2str(miWindowSize)]);
+        
+        f=figure('Visible','Off');
+        set(f,'PaperPositionMode','auto');
+        set(f, 'Position', [0 100 1350 400]);
+        set(f,'DefaultAxesLooseInset',[0,0,0,0]);
+        boxplot(miDiffAv,shiftLabels);
+        ylabel('MI');
+        title({'Mutual information diff',['All seizures, MI Win. size: ', ...
+          num2str(miWindowSize),'s']});
+        grid on;
+        savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'],['MiDiff_AllSz','_win',num2str(miWindowSize)]);
+        savePlot2File(f,'fig',[reportwpath,'/',dirs{i},'/'],['MiDiff_AllSz','_win',num2str(miWindowSize)]);
+        
+        saveWrapper([reportwpath,'/',dirs{i},'/MI_Total_win',num2str(miWindowSize),'.mat'],miAv,miVarAv,miDiffAv);
              
         f=figure('Visible','Off');
         set(f,'PaperPositionMode','auto');
@@ -157,8 +223,8 @@ function eegProcByPatients()
         set(gca,'XTickLabel',shiftLabels,'XTick',1:numel(shiftLabels));
         title('Number of probes in averaging in av.MI for patient');
         grid on;
-        savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'],['MI_AllSzCnt','_win',num2str(miWindowSize)]);
-        savePlot2File(f,'fig',[reportwpath,'/',dirs{i},'/'],['MI_AllSzCnt','_win',num2str(miWindowSize)]);
+        savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'],['Mi_AllSzCnt','_win',num2str(miWindowSize)]);
+        savePlot2File(f,'fig',[reportwpath,'/',dirs{i},'/'],['Mi_AllSzCnt','_win',num2str(miWindowSize)]);
         
         disp(['Elapsed time: ',num2str(toc),' s']);
       end
@@ -170,7 +236,7 @@ function eegProcByPatients()
   end
 end
 
-function [mi,miSur,miLabels,s,idxPrev]=calcShiftedMi(ia,s,p,startTime,sDuration, ...
+function [mi,miVar,miSur,miVarSur,miLabels,s,idxPrev]=calcShiftedMi(ia,s,p,startTime,sDuration, ...
   miWindowSize,idxPrev,wpath,pdir,subjectInfoFileName)
   % Calculate number of interconnected channels
   tmp=p.minChNum-1;
@@ -180,7 +246,9 @@ function [mi,miSur,miLabels,s,idxPrev]=calcShiftedMi(ia,s,p,startTime,sDuration,
     tmp=tmp-1;
   end     
   mi=zeros(miChNum,1);
+  miVar=zeros(miChNum,1);
   miSur=zeros(miChNum,1);
+  miVarSur=zeros(miChNum,1);
   miLabels=[];
   n=1;
   while (p.signalsAll{n,2}<startTime && n<size(p.signalsAll,1))
@@ -203,7 +271,7 @@ function [mi,miSur,miLabels,s,idxPrev]=calcShiftedMi(ia,s,p,startTime,sDuration,
       startTime=s.records-sDuration-miWindowSize-1;
     end
     sigIdxBuf=p.signalsAll{idx,5}(1:p.minChNum);
-    [mi,miSur,miLabels]=ia.windowedShortTimeMi(s,sigIdxBuf,startTime,sDuration,miWindowSize);
+    [mi,miVar,miSur,miVarSur,miLabels]=ia.windowedShortTimeMi(s,sigIdxBuf,startTime,sDuration,miWindowSize);
   end
   idxPrev=idx;
 end
