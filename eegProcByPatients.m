@@ -22,8 +22,9 @@ function eegProcByPatients()
   dirs={items([items.isdir]).name};
   dirs=dirs(3:end);
   windowSizesBuf=[0.25]; % Seconds
-  sDuration=10; % Large window size, seconds
+  sDuration=1; % Large window size, seconds
   shiftBuf=[14400:-300:300]; % Backshift values from seizure, seconds
+  totalTime=0;
   shiftLabels=cell(1,numel(shiftBuf));
   for i=1:numel(shiftBuf)
     shiftLabels{i}=num2str(shiftBuf(i)/60);
@@ -34,9 +35,10 @@ function eegProcByPatients()
     parpool;
   end
   
+  disp(['Averaging window size = ',num2str(sDuration),' s']);
   for miIdx=1:numel(windowSizesBuf)
     miWindowSize=windowSizesBuf(miIdx);
-    disp(['MI WINDOW SIZE = ',num2str(miWindowSize)]);
+    disp(['MI window size = ',num2str(miWindowSize),' s']);
     for i=1:numel(dirs)-1
       disp('>---------------------------------------------------------------');
       tic;
@@ -62,6 +64,7 @@ function eegProcByPatients()
 %           nOfSeizures=nOfSeizures+numel(good_seizures_numbers);
         end
       end
+      disp(['Number of patient''s seizures: ',num2str(nOfSeizures)]);
       sIdx=1;
       mi=[];
       prevSeizureStartTime=0;
@@ -78,10 +81,11 @@ function eegProcByPatients()
         goog_seizures_idx=1:p.signalsAll{k,4};
         goog_seizures_idx=goog_seizures_idx(s.good_seizures_numbers);
         if numel(goog_seizures_idx)==0
-          disp('There is no good seizures!');
+          disp('There are no good seizures!');
         end
         for m=goog_seizures_idx
           if (k~=idxPrev)
+            disp(['Loading signal with seizure ',p.signalsAll{k,1},'...']);
             s=loadRecord(wpath,[dirs{i},'/',p.signalsAll{k,1}],subjectInfoFileName,...
               1,1,1);
           end
@@ -171,6 +175,72 @@ function eegProcByPatients()
             num2str(miWindowSize)]);
           savePlot2File(f,'fig',[reportwpath,'/',dirs{i},'/'],['MiDiff_Sz',num2str(sIdx),'_win', ...
             num2str(miWindowSize)]);
+          
+          % Tests
+          testLabels={'kstest','kstest2','ttest2','ranksum'};
+          testMi=zeros(4,length(shiftLabels),3)+0.5;
+          testMiVar=zeros(4,length(shiftLabels),3)+0.5;
+          testDiff=zeros(4,length(shiftLabels),3)+0.5;
+          redColor=[1,0,0];
+          for tmp=1:length(shiftLabels)
+            if (mi(1,tmp)~=0)
+              testMi(1,tmp,1:3)=kstest(mi(:,tmp));
+              testMi(2,tmp,1:3)=kstest2(mi(:,tmp),mi(:,end));
+              testMi(3,tmp,1:3)=ttest2(mi(:,tmp),mi(:,end));
+              [~,testMi(4,tmp,1:3)]=ranksum(mi(:,tmp),mi(:,end));
+
+              testMiVar(1,tmp,1:3)=kstest(miVar(:,tmp));
+              testMiVar(2,tmp,1:3)=kstest2(miVar(:,tmp),miVar(:,end));
+              testMiVar(3,tmp,1:3)=ttest2(miVar(:,tmp),miVar(:,end));
+              [~,testMiVar(4,tmp,1:3)]=ranksum(miVar(:,tmp),miVar(:,end));
+
+              testDiff(1,tmp,1:3)=kstest(miVar(:,tmp));
+              testDiff(2,tmp,1:3)=kstest2(miVar(:,tmp),miVar(:,end));
+              testDiff(3,tmp,1:3)=ttest2(miVar(:,tmp),miVar(:,end));
+              [~,testDiff(4,tmp,1:3)]=ranksum(miVar(:,tmp),miVar(:,end));
+            end
+          end
+          [idxM,idxN]=find(isnan(testMi(:,:,1)));
+          for tmp=1:numel(idxN)
+            nanIdx=find(isnan(mi(:,idxN)));
+            if numel(nanIdx>0)
+              disp(['MI contain NaNs.']);
+            end
+            testMi(idxM(tmp),idxN(tmp),:)=redColor;
+          end
+            
+          f=figure('Visible','On');
+          set(f,'PaperPositionMode','auto');
+          set(f, 'Position', [0 100 1350 600]);
+          set(f,'DefaultAxesLooseInset',[0,0,0,0]);
+          subplot(3,1,1);
+          imagesc(testMi);
+          colormap(gray);
+          set(gca,'YTick',1:4,'YTickLabel',testLabels,'XTick',1:numel(shiftLabels), ...
+            'XTickLabel',shiftLabels);
+          title({'Tests for MI',['Seizure ',num2str(sIdx),' from ',...
+            sSigName,' at ',num2str(absStartTime),'s, Averaging win. size: ',...
+            num2str(sDuration),'s, MI Win. size: ',num2str(miWindowSize),'s. ', ...
+            '1 - white, 0 - black, NaN - red.']});      
+          grid minor;
+          subplot(3,1,2);
+          imagesc(testMiVar);
+          colormap(gray);
+          set(gca,'YTick',1:4,'YTickLabel',testLabels,'XTick',1:numel(shiftLabels), ...
+            'XTickLabel',shiftLabels);
+          title('Tests for MI var');
+          grid minor;
+          subplot(3,1,3);
+          imagesc(testDiff);
+          colormap(gray);
+          set(gca,'YTick',1:4,'YTickLabel',testLabels,'XTick',1:numel(shiftLabels), ...
+            'XTickLabel',shiftLabels);
+          title('Tests for MI diff');
+          grid minor;
+          savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'],['Tests_Sz',num2str(sIdx),'_win', ...
+            num2str(miWindowSize)]);
+          savePlot2File(f,'fig',[reportwpath,'/',dirs{i},'/'],['Tests_Sz',num2str(sIdx),'_win', ...
+            num2str(miWindowSize)]);
 
           % Store calculated data
           saveWrapper([reportwpath,'/',dirs{i},'/','Mi_Sz',num2str(sIdx),'_win', ...
@@ -185,13 +255,16 @@ function eegProcByPatients()
         end
       end
       cntBuf=zeros(size(seizuresSigIdx));
+      disp(['Number of processed good seizures: ',num2str(sIdx-1)]);
       if (size(miAllSz,1)>0 && size(miAllSz,2)>0)
         miAv=zeros(size(mi));
         miVarAv=zeros(size(mi));
         miDiffAv=zeros(size(mi));
         for j=1:size(miAv,2)
           cnt=0;
-          for n=1:sIdx
+          for n=1:sIdx-1
+%             n,j,size(miAv,2),sIdx
+%             size(miAllSz)
             if (numel(miAllSz{n}) > 0)
               if (miAllSz{n}(1,j) ~= 0)
                 miAv(:,j)=miAv(:,j)+miAllSz{n}(:,j);
@@ -239,11 +312,80 @@ function eegProcByPatients()
         title({'Mutual information diff',['All seizures, MI Win. size: ', ...
           num2str(miWindowSize),'s']});
         grid on;
-        savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'],['MiDiff_AllSz','_win',num2str(miWindowSize)]);
-        savePlot2File(f,'fig',[reportwpath,'/',dirs{i},'/'],['MiDiff_AllSz','_win',num2str(miWindowSize)]);
+        savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'], ...
+          ['MiDiff_AllSz','_win',num2str(miWindowSize)]);
+        savePlot2File(f,'fig',[reportwpath,'/',dirs{i},'/'], ...
+          ['MiDiff_AllSz','_win',num2str(miWindowSize)]);
         
-        saveWrapper([reportwpath,'/',dirs{i},'/MI_Total_win',num2str(miWindowSize),'.mat'],miAv,miVarAv,miDiffAv);
-             
+        saveWrapper([reportwpath,'/',dirs{i},'/MI_Total_win', ...
+          num2str(miWindowSize),'.mat'],miAv,miVarAv,miDiffAv);
+        
+        % Tests
+        testLabels={'kstest','kstest2','ttest2','ranksum'};
+        testMi=zeros(4,length(shiftLabels))+0.5;
+        testMiVar=zeros(4,length(shiftLabels))+0.5;
+        testDiff=zeros(4,length(shiftLabels))+0.5;       
+        redColor=[1,0,0];
+        for tmp=1:length(shiftLabels)
+          if (numel(miAv)>0)
+            if (miAv(1,tmp)~=0 && ~isnan(miAv(1,tmp)))
+              testMi(1,tmp)=kstest(miAv(:,tmp));
+              testMi(2,tmp)=kstest2(miAv(:,tmp),miAv(:,end));
+              testMi(3,tmp)=ttest2(miAv(:,tmp),miAv(:,end));
+              [~,testMi(4,tmp)]=ranksum(miAv(:,tmp),miAv(:,end));
+
+              testMiVar(1,tmp)=kstest(miVarAv(:,tmp));
+              testMiVar(2,tmp)=kstest2(miVarAv(:,tmp),miVarAv(:,end));
+              testMiVar(3,tmp)=ttest2(miVarAv(:,tmp),miVarAv(:,end));
+              [~,testMiVar(4,tmp)]=ranksum(miVarAv(:,tmp),miVarAv(:,end));
+
+              testDiff(1,tmp)=kstest(miDiffAv(:,tmp));
+              testDiff(2,tmp)=kstest2(miDiffAv(:,tmp),miDiffAv(:,end));
+              testDiff(3,tmp)=ttest2(miDiffAv(:,tmp),miDiffAv(:,end));
+              [~,testDiff(4,tmp)]=ranksum(miDiffAv(:,tmp),miDiffAv(:,end));
+            end
+          end
+        end
+        [idxM,idxN]=find(isnan(testMi(:,:,1)));
+        for tmp=1:numel(idxN)
+          nanIdx=find(isnan(mi(:,idxN)));
+          if numel(nanIdx>0)
+            disp(['MI contain NaNs.']);
+          end
+          testMi(idxM(tmp),idxN(tmp),:)=redColor;
+        end
+
+        f=figure('Visible','On');
+        set(f,'PaperPositionMode','auto');
+        set(f, 'Position', [0 100 1350 600]);
+        set(f,'DefaultAxesLooseInset',[0,0,0,0]);
+        subplot(3,1,1);
+        imagesc(testMi);
+        colormap(gray);
+        set(gca,'YTick',1:4,'YTickLabel',testLabels,'XTick',1:numel(shiftLabels), ...
+          'XTickLabel',shiftLabels);
+        title({'Tests for MI',['All seizures, MI Win. size: ', ...
+          num2str(miWindowSize),'s. 1 - white, 0 - black, NaN - red.']});
+        grid minor;
+        subplot(3,1,2);
+        imagesc(testMiVar);
+        colormap(gray);
+        set(gca,'YTick',1:4,'YTickLabel',testLabels,'XTick',1:numel(shiftLabels), ...
+          'XTickLabel',shiftLabels);
+        title('Tests for MI var');
+        grid minor;
+        subplot(3,1,3);
+        imagesc(testDiff);
+        colormap(gray);
+        set(gca,'YTick',1:4,'YTickLabel',testLabels,'XTick',1:numel(shiftLabels), ...
+          'XTickLabel',shiftLabels);
+        title('Tests for MI diff');
+        grid minor;
+        savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'],['TestsAll_win', ...
+          num2str(miWindowSize)]);
+        savePlot2File(f,'fig',[reportwpath,'/',dirs{i},'/'],['TestsAll_win', ...
+          num2str(miWindowSize)]);
+        
         f=figure('Visible','Off');
         set(f,'PaperPositionMode','auto');
         set(f,'Position', [0 100 1350 400]);
@@ -255,11 +397,15 @@ function eegProcByPatients()
         savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'],['Mi_AllSzCnt','_win',num2str(miWindowSize)]);
         savePlot2File(f,'fig',[reportwpath,'/',dirs{i},'/'],['Mi_AllSzCnt','_win',num2str(miWindowSize)]);
         
-        disp(['Elapsed time: ',num2str(toc),' s']);
+        patTime=toc;
+        totalTime=totalTime+patTime;
+        disp(['Elapsed time: ',num2str(patTime),' s']);
       end
       close all;
     end
   end
+  eTimeStr=datestr(totalTime/86400, 'HH:MM:SS');
+  disp(['Total elapsed time: ',eTimeStr]);
   if (parallelFlag>0)
     delete(gcp);
   end
@@ -288,15 +434,15 @@ function [mi,miVar,miSur,miVarSur,miLabels,s,idxPrev]=calcShiftedMi(ia,s,p,start
     idx=n-1;
   else
     idx=sigNum;
-  end
-  disp(['Processing ',pdir,'/',p.signalsAll{idx,1}]);
+  end 
   if (idx~=idxPrev)
+    disp(['Processing ',pdir,'/',p.signalsAll{idx,1}]);
     s=loadRecord(wpath,[pdir,'/',p.signalsAll{idx,1}],subjectInfoFileName,...
       1,1,1);
   end
   startTime=startTime-p.signalsAll{idx,2};
   if (startTime+sDuration-s.records<11)
-    if (startTime+sDuration>s.records)
+    if (startTime+sDuration>=s.records)
       startTime=s.records-sDuration-miWindowSize-1;
     end
     sigIdxBuf=p.signalsAll{idx,5}(1:p.minChNum);

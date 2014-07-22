@@ -21,11 +21,11 @@ function mi=muinfo(s1,s2)
   mi=0;
   for i=1:nbins
     for j=1:nbins
-      if (p12(i,j)~=0 && p1(i)>0 && p2(i)>0)
+      if ((p12(i,j)~=0) && (p1(i)>0) && (p2(j)>0))
         mi=mi+p12(i,j)*log(p12(i,j)/(p1(i)*p2(j)));
       end
 %       if (isnan(mi) || mi == Inf)
-%         p1, p2, p12
+%         i,j,p1, p2, p12
 %         pause;
 %       end
     end

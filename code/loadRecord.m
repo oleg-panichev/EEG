@@ -55,7 +55,7 @@ function [s]=loadRecord(wpath,fileName,subjectInfoFileName,...
       s.average_seizures_numbers=s_struct.average_seizures_numbers;
       s.good_seizures_numbers=s_struct.good_seizures_numbers;
     end
-    disp('Data loading is done.');
+%     disp('Data loading is done.');
   else
     error([dataType,' - data type is not supported!']);
   end

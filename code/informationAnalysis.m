@@ -248,7 +248,9 @@ classdef informationAnalysis < handle
     % miLabels - channels pairs labels
     function [miAvBuf,miVarBuf,miAvSurBuf,miVarSurBuf,miLabels]=windowedShortTimeMi(obj,s,sigIdxBuf,sStartTime, ...
         sDuration,miWindowSize)   
-      disp(['Start time: ',num2str(sStartTime),'s, Duration: ',num2str(sDuration),'s']);
+      % Function for MI calculation and averaging
+      
+%       disp(['Start time: ',num2str(sStartTime),'s, Duration: ',num2str(sDuration),'s']);
       chIdx=1;  
       obj.miFs=miWindowSize/2;
       if (sDuration==0)
@@ -264,7 +266,7 @@ classdef informationAnalysis < handle
       end     
 
       % Calculate MI for all channels
-      disp('Calculating mutual information...');
+      disp(['Calculating MI at ',num2str(sStartTime),'s.']);
       halfWinSz=round(miWindowSize*s.eegFs/2);
       samplesBuf=(sStartTime*s.eegFs+halfWinSz+1):round(s.eegFs*obj.miFs): ...
               ((sStartTime+sDuration)*s.eegFs-halfWinSz+1);
@@ -281,7 +283,7 @@ classdef informationAnalysis < handle
         for j=sigIdxBuf(sigIdxBuf>k)
 %           disp([num2str(k),'-',num2str(j)]);
           idx=1;     
-          for i=samplesBuf;
+          for i=samplesBuf
             x=s.record(k,i-halfWinSz:i+halfWinSz)-mean(s.record(k,i-halfWinSz:i+halfWinSz));
             y=s.record(j,i-halfWinSz:i+halfWinSz)-mean(s.record(j,i-halfWinSz:i+halfWinSz));
             miBuf(chIdx,idx)=muinfo(x,y);  
@@ -300,9 +302,9 @@ classdef informationAnalysis < handle
           
           % Store averaged MI and other info 
           if (sDuration>miWindowSize)
-            miAvBuf(chIdx)=medianFilter(miBuf(chIdx,:),0.5);
+            miAvBuf(chIdx)=mean(miBuf(chIdx,:));
             miVarBuf(chIdx)=var(miBuf(chIdx,:));
-            miAvSurBuf(chIdx)=medianFilter(miSurBuf(chIdx,:),0.5);
+            miAvSurBuf(chIdx)=mean(miSurBuf(chIdx,:));
             miVarSurBuf(chIdx)=var(miSurBuf(chIdx,:));
           else
             miAvBuf(chIdx)=miBuf(chIdx,:);
@@ -315,7 +317,8 @@ classdef informationAnalysis < handle
         end
       end
       miLabels=obj.miLabels;
-      disp('Done.');
+%       [B,I]=sort(miAvBuf
+%       disp('Done.');
     end
   end % methods
 end % classdef
