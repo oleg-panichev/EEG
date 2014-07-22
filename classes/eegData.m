@@ -29,6 +29,8 @@ classdef eegData < handle
     eegFs; % sample rate of eeg data
     annSeizure; % seizure annotation, 0 - no seizure, 1 - seizure
     seizureTimings; % seizuse start and end times, (numberOfseizures,2)
+    average_seizures_numbers; % Indexes of not good and not bad seizures
+    good_seizures_numbers; % Indexes of good seizures
   end
   
   methods  (Access='public')

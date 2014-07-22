@@ -50,6 +50,11 @@ function [s]=loadRecord(wpath,fileName,subjectInfoFileName,...
     s.eegFs=s_struct.eegFs; 
     s.annSeizure=s_struct.annSeizure; 
     s.seizureTimings=s_struct.seizureTimings; 
+    if (isfield(s_struct,'average_seizures_numbers') && ...
+        isfield(s_struct,'good_seizures_numbers'))
+      s.average_seizures_numbers=s_struct.average_seizures_numbers;
+      s.good_seizures_numbers=s_struct.good_seizures_numbers;
+    end
     disp('Data loading is done.');
   else
     error([dataType,' - data type is not supported!']);

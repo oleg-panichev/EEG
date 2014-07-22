@@ -20,7 +20,7 @@ classdef informationAnalysis < handle
   end
   
   methods  (Access='public')
-    % Constructor
+    % Constructor   
     function obj=informationAnalysis(s)
       obj.winSize=2*s.eegFs; % Size of window to analyze signal
       % Check parameters
@@ -251,6 +251,9 @@ classdef informationAnalysis < handle
       disp(['Start time: ',num2str(sStartTime),'s, Duration: ',num2str(sDuration),'s']);
       chIdx=1;  
       obj.miFs=miWindowSize/2;
+      if (sDuration==0)
+        sDuration=miWindowSize;
+      end
          
       % Calculate number of interconnected channels
       i=numel(sigIdxBuf)-1;
@@ -264,7 +267,7 @@ classdef informationAnalysis < handle
       disp('Calculating mutual information...');
       halfWinSz=round(miWindowSize*s.eegFs/2);
       samplesBuf=(sStartTime*s.eegFs+halfWinSz+1):round(s.eegFs*obj.miFs): ...
-              ((sStartTime+sDuration)*s.eegFs-halfWinSz);
+              ((sStartTime+sDuration)*s.eegFs-halfWinSz+1);
       miAvBuf=zeros(obj.miChNum,1);
       miVarBuf=zeros(obj.miChNum,1);
       miAvSurBuf=zeros(obj.miChNum,1);
@@ -274,27 +277,39 @@ classdef informationAnalysis < handle
       
       for k=sigIdxBuf
 %         disp(['Channel #',num2str(k),'...']);
+        
         for j=sigIdxBuf(sigIdxBuf>k)
 %           disp([num2str(k),'-',num2str(j)]);
           idx=1;     
           for i=samplesBuf;
-            miBuf(chIdx,idx)=muinfo(s.record(k,i-halfWinSz:i+halfWinSz),...
-              s.record(j,i-halfWinSz:i+halfWinSz));  
+            x=s.record(k,i-halfWinSz:i+halfWinSz)-mean(s.record(k,i-halfWinSz:i+halfWinSz));
+            y=s.record(j,i-halfWinSz:i+halfWinSz)-mean(s.record(j,i-halfWinSz:i+halfWinSz));
+            miBuf(chIdx,idx)=muinfo(x,y);  
+%             miBuf(chIdx,idx)=mi(s.record(k,i-halfWinSz:i+halfWinSz),...
+%               s.record(j,i-halfWinSz:i+halfWinSz));  
             
             % Permutate second signal for surrogate obtaining
-            permData=s.record(j,(i-halfWinSz):(i+halfWinSz));
+            permData=y;
             permData=permData(randperm(length(permData)));
             miSurBuf(chIdx,idx)=muinfo(s.record(k,i-halfWinSz:i+halfWinSz),permData);  
+%             miSurBuf(chIdx,idx)=mi(s.record(k,i-halfWinSz:i+halfWinSz),permData);  
             
             idx=idx+1;
           end
           obj.miLabels{chIdx}=([s.label{k},'-',s.label{j}]);
           
           % Store averaged MI and other info 
-          miAvBuf(chIdx)=mean(miBuf(chIdx,:));
-          miVarBuf(chIdx)=var(miBuf(chIdx,:));
-          miAvSurBuf(chIdx)=mean(miSurBuf(chIdx,:));
-          miVarSurBuf(chIdx)=var(miSurBuf(chIdx,:));
+          if (sDuration>miWindowSize)
+            miAvBuf(chIdx)=medianFilter(miBuf(chIdx,:),0.5);
+            miVarBuf(chIdx)=var(miBuf(chIdx,:));
+            miAvSurBuf(chIdx)=medianFilter(miSurBuf(chIdx,:),0.5);
+            miVarSurBuf(chIdx)=var(miSurBuf(chIdx,:));
+          else
+            miAvBuf(chIdx)=miBuf(chIdx,:);
+            miVarBuf(chIdx)=0;
+            miAvSurBuf(chIdx)=miSurBuf(chIdx,:);
+            miVarSurBuf(chIdx)=0;
+          end
           
           chIdx=chIdx+1;
         end
