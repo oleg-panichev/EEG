@@ -257,13 +257,8 @@ classdef informationAnalysis < handle
         sDuration=miWindowSize;
       end
          
-      % Calculate number of interconnected channels
-      i=numel(sigIdxBuf)-1;
-      obj.miChNum=0;
-      while i>0
-        obj.miChNum=obj.miChNum+i;
-        i=i-1;
-      end     
+      % Calculate number of interconnected channels 
+      obj.miChNum=sum(1:(numel(sigIdxBuf)-1));
 
       % Calculate MI for all channels
       disp(['Calculating MI at ',num2str(sStartTime),'s.']);

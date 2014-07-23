@@ -7,7 +7,7 @@ function eegProcByPatients()
   wpath='eeg_data/chbmit_mat/'; % Directory containing db
   % 'eeg_data/physionet.org/physiobank/database/chbmit/'
   % 'eeg_data/chbmit_mat/'
-  reportwpath='reports_20140721/';
+  reportwpath='reports_20140721_median/';
   % 'RECORDS'
   % 'RECORDS-WITH-SEIZURES'
   subjectInfoFileName='SUBJECT-INFO'; % Name of the file that contains info about patients
@@ -15,15 +15,19 @@ function eegProcByPatients()
   parallelFlag=0;
 
   if (~exist(reportwpath,'dir'))
-      mkdir(reportwpath);
+  	mkdir(reportwpath);
   end
 
   items=dir(wpath);
   dirs={items([items.isdir]).name};
   dirs=dirs(3:end);
+  
   windowSizesBuf=[0.25]; % Seconds
-  sDuration=1; % Large window size, seconds
+  sDuration=2; % Large window size, seconds
   shiftBuf=[14400:-300:300]; % Backshift values from seizure, seconds
+  patientsIdxBuf=[1:23];
+  medianCoef=0.9; 
+  
   totalTime=0;
   shiftLabels=cell(1,numel(shiftBuf));
   for i=1:numel(shiftBuf)
@@ -39,7 +43,7 @@ function eegProcByPatients()
   for miIdx=1:numel(windowSizesBuf)
     miWindowSize=windowSizesBuf(miIdx);
     disp(['MI window size = ',num2str(miWindowSize),' s']);
-    for i=1:numel(dirs)-1
+    for i=patientsIdxBuf
       disp('>---------------------------------------------------------------');
       tic;
       % Load patient data
@@ -61,7 +65,6 @@ function eegProcByPatients()
         if (p.signalsAll{n,4}>0)
           seizuresSigIdx=[seizuresSigIdx,n];
           nOfSeizures=nOfSeizures+p.signalsAll{n,4};
-%           nOfSeizures=nOfSeizures+numel(good_seizures_numbers);
         end
       end
       disp(['Number of patient''s seizures: ',num2str(nOfSeizures)]);
@@ -95,12 +98,7 @@ function eegProcByPatients()
           % Calculate MI during the seizure and right before the seizure
           sigIdxBuf=p.signalsAll{k,5}(1:p.minChNum);
           % Calculate number of interconnected channels
-          tmp=numel(sigIdxBuf)-1;
-          miChNum=0;
-          while tmp>0
-            miChNum=miChNum+tmp;
-            tmp=tmp-1;
-          end    
+          miChNum=sum(1:(numel(sigIdxBuf)-1));
           mi=zeros(miChNum,numel(shiftBuf)+2);
           miVar=zeros(miChNum,numel(shiftBuf)+2);
           miSur=zeros(miChNum,numel(shiftBuf)+2);
@@ -130,12 +128,33 @@ function eegProcByPatients()
           miDiff=zeros(size(mi));
           miDiff(:,2:end)=abs(diff(mi,1,2));
 
+          % Using only median kernel elements for boxplot
+          if (medianCoef<1 && medianCoef>0)
+            elNum=round(size(mi,1)*medianCoef);
+            skipNum=round((size(mi,1)-elNum)/2);
+            miBox=zeros(elNum,size(mi,2));
+            miVarBox=zeros(elNum,size(mi,2));
+            miDiffBox=zeros(elNum,size(mi,2));
+            for tmp=1:size(mi,2)
+              medMi=sort(mi(:,tmp));
+              miBox(:,tmp)=medMi((1+skipNum):(1+skipNum+elNum-1));
+              medMi=sort(miVar(:,tmp));
+              miVarBox(:,tmp)=medMi((1+skipNum):(1+skipNum+elNum-1));
+              medMi=sort(miDiff(:,tmp));
+              miDiffBox(:,tmp)=medMi((1+skipNum):(1+skipNum+elNum-1));
+            end
+          else
+            miBox=mi;
+            miVarBox=miVar;
+            miDiffBox=miDiff;
+          end
+          
           % Plot results for current SEIZURE
           f=figure('Visible','Off');
           set(f,'PaperPositionMode','auto');
           set(f, 'Position', [0 100 1350 400]);
           set(f,'DefaultAxesLooseInset',[0,0,0,0]);
-          boxplot(mi,shiftLabels);
+          boxplot(miBox,shiftLabels);
           ylabel('MI');
           title({'Mutual information',['Seizure ',num2str(sIdx),' from ',...
             sSigName,' at ',num2str(absStartTime),'s, Averaging win. size: ',...
@@ -150,7 +169,7 @@ function eegProcByPatients()
           set(f,'PaperPositionMode','auto');
           set(f, 'Position', [0 100 1350 400]);
           set(f,'DefaultAxesLooseInset',[0,0,0,0]);
-          boxplot(miVar,shiftLabels);
+          boxplot(miVarBox,shiftLabels);
           ylabel('MI');
           title({'Mutual information variance',['Seizure ',num2str(sIdx),' from ',...
             sSigName,' at ',num2str(absStartTime),'s, Averaging win. size: ',...
@@ -165,7 +184,7 @@ function eegProcByPatients()
           set(f,'PaperPositionMode','auto');
           set(f, 'Position', [0 100 1350 400]);
           set(f,'DefaultAxesLooseInset',[0,0,0,0]);
-          boxplot(miDiff,shiftLabels);
+          boxplot(miDiffBox,shiftLabels);
           ylabel('MI');
           title({'Mutual information diff',['Seizure ',num2str(sIdx),' from ',...
             sSigName,' at ',num2str(absStartTime),'s, Averaging win. size: ',...
@@ -194,10 +213,10 @@ function eegProcByPatients()
               testMiVar(3,tmp,1:3)=ttest2(miVar(:,tmp),miVar(:,end));
               [~,testMiVar(4,tmp,1:3)]=ranksum(miVar(:,tmp),miVar(:,end));
 
-              testDiff(1,tmp,1:3)=kstest(miVar(:,tmp));
-              testDiff(2,tmp,1:3)=kstest2(miVar(:,tmp),miVar(:,end));
-              testDiff(3,tmp,1:3)=ttest2(miVar(:,tmp),miVar(:,end));
-              [~,testDiff(4,tmp,1:3)]=ranksum(miVar(:,tmp),miVar(:,end));
+              testDiff(1,tmp,1:3)=kstest(miDiff(:,tmp));
+              testDiff(2,tmp,1:3)=kstest2(miDiff(:,tmp),miDiff(:,end));
+              testDiff(3,tmp,1:3)=ttest2(miDiff(:,tmp),miDiff(:,end));
+              [~,testDiff(4,tmp,1:3)]=ranksum(miDiff(:,tmp),miDiff(:,end));
             end
           end
           [idxM,idxN]=find(isnan(testMi(:,:,1)));
@@ -269,21 +288,44 @@ function eegProcByPatients()
               if (miAllSz{n}(1,j) ~= 0)
                 miAv(:,j)=miAv(:,j)+miAllSz{n}(:,j);
                 miVarAv(:,j)=miVarAv(:,j)+miVarAllSz{n}(:,j);
-                miDiffAv(:,j)=miDiffAv(:,j)+miVarAllSz{n}(:,j);
+                miDiffAv(:,j)=miDiffAv(:,j)+miDiffAllSz{n}(:,j);
                 cnt=cnt+1;
               end
             end
           end
           miAv(:,j)=miAv(:,j)/cnt;
           miVarAv(:,j)=miVarAv(:,j)/cnt;
+          miDiffAv(:,j)=miDiffAv(:,j)/cnt;
           cntBuf(j)=cnt;
         end
+        
+        % Using only median kernel elements for boxplot
+        if (medianCoef<1 && medianCoef>0)
+          elNum=round(size(miAv,1)*medianCoef);
+          skipNum=round((size(miAv,1)-elNum)/2);
+          miAvBox=zeros(elNum,size(miAv,2));
+          miVarAvBox=zeros(elNum,size(miAv,2));
+          miDiffAvBox=zeros(elNum,size(miAv,2));
+          for tmp=1:size(mi,2)
+            medMi=sort(miAv(:,tmp));
+            miAvBox(:,tmp)=medMi((1+skipNum):(1+skipNum+elNum-1));
+            medMi=sort(miVarAv(:,tmp));
+            miVarAvBox(:,tmp)=medMi((1+skipNum):(1+skipNum+elNum-1));
+            medMi=sort(miDiffAv(:,tmp));
+            miDiffAvBox(:,tmp)=medMi((1+skipNum):(1+skipNum+elNum-1));
+          end
+        else
+          miAvBox=mi;
+          miVarAvBox=miVar;
+          miDiffAvBox=miDiff;
+        end
+          
         % Plot results for current PATIENT
         f=figure('Visible','Off');
         set(f,'PaperPositionMode','auto');
         set(f, 'Position', [0 100 1350 400]);
         set(f,'DefaultAxesLooseInset',[0,0,0,0]);
-        boxplot(miAv,shiftLabels);
+        boxplot(miAvBox,shiftLabels);
         ylabel('MI');
         title({'Mutual information',['All seizures, MI Win. size: ', ...
           num2str(miWindowSize),'s']});
@@ -295,7 +337,7 @@ function eegProcByPatients()
         set(f,'PaperPositionMode','auto');
         set(f, 'Position', [0 100 1350 400]);
         set(f,'DefaultAxesLooseInset',[0,0,0,0]);
-        boxplot(miVarAv,shiftLabels);
+        boxplot(miVarAvBox,shiftLabels);
         ylabel('MI');
         title({'Mutual information variance',['All seizures, MI Win. size: ', ...
           num2str(miWindowSize),'s']});
@@ -307,7 +349,7 @@ function eegProcByPatients()
         set(f,'PaperPositionMode','auto');
         set(f, 'Position', [0 100 1350 400]);
         set(f,'DefaultAxesLooseInset',[0,0,0,0]);
-        boxplot(miDiffAv,shiftLabels);
+        boxplot(miDiffAvBox,shiftLabels);
         ylabel('MI');
         title({'Mutual information diff',['All seizures, MI Win. size: ', ...
           num2str(miWindowSize),'s']});
@@ -394,8 +436,10 @@ function eegProcByPatients()
         set(gca,'XTickLabel',shiftLabels,'XTick',1:numel(shiftLabels));
         title('Number of probes in averaging in av.MI for patient');
         grid on;
-        savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'],['Mi_AllSzCnt','_win',num2str(miWindowSize)]);
-        savePlot2File(f,'fig',[reportwpath,'/',dirs{i},'/'],['Mi_AllSzCnt','_win',num2str(miWindowSize)]);
+        savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'], ...
+          ['Mi_AllSzCnt','_win',num2str(miWindowSize)]);
+        savePlot2File(f,'fig',[reportwpath,'/',dirs{i},'/'], ...
+          ['Mi_AllSzCnt','_win',num2str(miWindowSize)]);
         
         patTime=toc;
         totalTime=totalTime+patTime;
@@ -413,13 +457,9 @@ end
 
 function [mi,miVar,miSur,miVarSur,miLabels,s,idxPrev]=calcShiftedMi(ia,s,p,startTime,sDuration, ...
   miWindowSize,idxPrev,wpath,pdir,subjectInfoFileName)
-  % Calculate number of interconnected channels
-  tmp=p.minChNum-1;
-  miChNum=0;
-  while tmp>0
-    miChNum=miChNum+tmp;
-    tmp=tmp-1;
-  end     
+  % Calculate number of interconnected channels 
+  miChNum=sum(1:(p.minChNum-1));
+  
   mi=zeros(miChNum,1);
   miVar=zeros(miChNum,1);
   miSur=zeros(miChNum,1);
