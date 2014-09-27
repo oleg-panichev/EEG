@@ -2,12 +2,14 @@ function eegProcByPatients()
   addpath('code');
   addpath('classes');
   addpath('MIToolbox');
+  addpath('plot');
   prepareWorkspace();
 
+  % Data location
   wpath='eeg_data/chbmit_mat/'; % Directory containing db
   % 'eeg_data/physionet.org/physiobank/database/chbmit/'
   % 'eeg_data/chbmit_mat/'
-  reportwpath='reports_20140721_median/';
+  reportwpath='reports_20140927/';
   % 'RECORDS'
   % 'RECORDS-WITH-SEIZURES'
   subjectInfoFileName='SUBJECT-INFO'; % Name of the file that contains info about patients
@@ -20,21 +22,24 @@ function eegProcByPatients()
 
   items=dir(wpath);
   dirs={items([items.isdir]).name};
-  dirs=dirs(3:end);
+  dirs=dirs(4:end);
   
-  windowSizesBuf=[0.25]; % Seconds
-  sDuration=2; % Large window size, seconds
-  shiftBuf=[14400:-300:300]; % Backshift values from seizure, seconds
-  patientsIdxBuf=[1:23];
+  % Processing parameters
+  windowSizesBuf=[0.5]; % Seconds
+  sDuration=0.5; % Large window size, seconds
+  shiftBuf=[7200:-300:3600,3300:-300:30]; % Backshift values from seizure, seconds
+  patientsIdxBuf=[1,3,4,5,8,9,10,15,18,19,20,23];
   medianCoef=0.9; 
   
   totalTime=0;
   shiftLabels=cell(1,numel(shiftBuf));
   for i=1:numel(shiftBuf)
-    shiftLabels{i}=num2str(shiftBuf(i)/60);
+    shiftLabels{i}=num2str(round(shiftBuf(i)/60*100)/100);
   end
   shiftLabels{i+1}='Pre';
-  shiftLabels{i+2}='SZ';
+  shiftLabels{i+2}='SZ1';
+  shiftLabels{i+3}='SZ2';
+  shiftLabels{i+4}='SZ3';
   if (parallelFlag>0)
     parpool;
   end
@@ -69,11 +74,14 @@ function eegProcByPatients()
       end
       disp(['Number of patient''s seizures: ',num2str(nOfSeizures)]);
       sIdx=1;
+      
+      % Prepare buffers
       mi=[];
       prevSeizureStartTime=0;
       miAllSz=cell(nOfSeizures,1);
       miVarAllSz=cell(nOfSeizures,1);
       miDiffAllSz=cell(nOfSeizures,1);
+      
       for k=seizuresSigIdx
         % Load signal with seizure for proccessing
         disp(['Loading signal with seizure ',p.signalsAll{k,1},'...']);
@@ -99,14 +107,20 @@ function eegProcByPatients()
           sigIdxBuf=p.signalsAll{k,5}(1:p.minChNum);
           % Calculate number of interconnected channels
           miChNum=sum(1:(numel(sigIdxBuf)-1));
-          mi=zeros(miChNum,numel(shiftBuf)+2);
-          miVar=zeros(miChNum,numel(shiftBuf)+2);
-          miSur=zeros(miChNum,numel(shiftBuf)+2);
-          miVarSur=zeros(miChNum,numel(shiftBuf)+2);
+          mi=zeros(miChNum,numel(shiftBuf)+4);
+          miVar=zeros(miChNum,numel(shiftBuf)+4);
+          miSur=zeros(miChNum,numel(shiftBuf)+4);
+          miVarSur=zeros(miChNum,numel(shiftBuf)+4);
+          
+          % Seizure and preseizure
           [mi(:,end),miVar(:,end),miSur(:,end),miVarSur(:,end),miLabels]= ...
-            ia.windowedShortTimeMi(s,sigIdxBuf,(sStartTime+8),sDuration,miWindowSize);
+            ia.windowedShortTimeMi(s,sigIdxBuf,(sStartTime+8+2*sDuration),sDuration,miWindowSize);
           [mi(:,end-1),miVar(:,end-1),miSur(:,end-1),miVarSur(:,end-1),~]= ...
-            ia.windowedShortTimeMi(s,sigIdxBuf,(sStartTime-sDuration),sDuration, ...
+            ia.windowedShortTimeMi(s,sigIdxBuf,(sStartTime+8+sDuration),sDuration,miWindowSize);
+          [mi(:,end-2),miVar(:,end-2),miSur(:,end-2),miVarSur(:,end-2),~]= ...
+            ia.windowedShortTimeMi(s,sigIdxBuf,(sStartTime+8),sDuration,miWindowSize);
+          [mi(:,end-3),miVar(:,end-3),miSur(:,end-3),miVarSur(:,end-3),~]= ...
+            ia.windowedShortTimeMi(s,sigIdxBuf,(sStartTime-5),sDuration, ...
             miWindowSize);
 
           % Calculating MI with shifts back before seizure and
@@ -117,8 +131,9 @@ function eegProcByPatients()
           while tmp>0
             startTime=absStartTime-shiftBuf(tmp);
             if (startTime > prevSeizureStartTime)
-              [mi(:,tmp),miVar(:,tmp),miSur(:,tmp),miVarSur(:,tmp),~,s,idxPrev]=calcShiftedMi(ia,s,p,startTime,sDuration, ...
-                miWindowSize,idxPrev,wpath,dirs{i},subjectInfoFileName);         
+              [mi(:,tmp),miVar(:,tmp),miSur(:,tmp),miVarSur(:,tmp),~,s,idxPrev]=...
+                calcShiftedMi(ia,s,p,startTime,sDuration,miWindowSize,...
+                idxPrev,wpath,dirs{i},subjectInfoFileName);         
             else
               break;
             end
@@ -127,6 +142,21 @@ function eegProcByPatients()
           prevSeizureStartTime=absStartTime;
           miDiff=zeros(size(mi));
           miDiff(:,2:end)=abs(diff(mi,1,2));
+          
+          % Distance between MI-points in N-dim. space
+          Rfull=zeros(size(mi,2),size(mi,2));
+          for tmp1=1:size(mi,2)
+            for tmp2=1:size(mi,2)
+              Rfull(tmp1,tmp2)=distance(mi(:,tmp1),mi(:,tmp2));
+            end
+          end
+          titleStr=({'Distance between MI-points',['Seizure ',num2str(sIdx),' from ',...
+            sSigName,' at ',num2str(absStartTime),'s, Averaging win. size: ',...
+            num2str(sDuration),'s, MI Win. size: ',num2str(miWindowSize),'s. ' ...
+            ]});
+          f=plotDistances(Rfull,shiftLabels,titleStr);
+          savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'],['MiDistance_Sz',num2str(sIdx),'_win', ...
+            num2str(miWindowSize)]);
 
           % Using only median kernel elements for boxplot
           if (medianCoef<1 && medianCoef>0)
@@ -152,9 +182,22 @@ function eegProcByPatients()
           % Plot results for current SEIZURE
           f=figure('Visible','Off');
           set(f,'PaperPositionMode','auto');
-          set(f, 'Position', [0 100 1350 400]);
-          set(f,'DefaultAxesLooseInset',[0,0,0,0]);
+          set(f,'Position',[0 100 1350 400]);
+          set(f,'DefaultAxesLooseInset',[0,0.1,0,0]);
           boxplot(miBox,shiftLabels);
+          set(gca,'XTick',1:numel(shiftLabels),'XTickLabel',shiftLabels);
+          XTickLabel = get(gca,'XTickLabel');
+          set(gca,'XTickLabel',' ');
+          hxLabel = get(gca,'XLabel');
+          set(hxLabel,'Units','data');
+          xLabelPosition = get(hxLabel,'Position');
+          y = xLabelPosition(2);
+          XTick = get(gca,'XTick');
+          y=repmat(y,length(XTick),1);
+          fs = get(gca,'fontsize');
+          hText = text(XTick, y, XTickLabel,'fontsize',fs);
+          set(hText,'Rotation',90,'HorizontalAlignment','right')
+          
           ylabel('MI');
           title({'Mutual information',['Seizure ',num2str(sIdx),' from ',...
             sSigName,' at ',num2str(absStartTime),'s, Averaging win. size: ',...
@@ -168,9 +211,22 @@ function eegProcByPatients()
           f=figure('Visible','Off');
           set(f,'PaperPositionMode','auto');
           set(f, 'Position', [0 100 1350 400]);
-          set(f,'DefaultAxesLooseInset',[0,0,0,0]);
+          set(f,'DefaultAxesLooseInset',[0,0.1,0,0]);
           boxplot(miVarBox,shiftLabels);
-          ylabel('MI');
+          set(gca,'XTick',1:numel(shiftLabels),'XTickLabel',shiftLabels);
+          XTickLabel = get(gca,'XTickLabel');
+          set(gca,'XTickLabel',' ');
+          hxLabel = get(gca,'XLabel');
+          set(hxLabel,'Units','data');
+          xLabelPosition = get(hxLabel,'Position');
+          y = xLabelPosition(2);
+          XTick = get(gca,'XTick');
+          y=repmat(y,length(XTick),1);
+          fs = get(gca,'fontsize');
+          hText = text(XTick, y, XTickLabel,'fontsize',fs);
+          set(hText,'Rotation',90,'HorizontalAlignment','right')
+          
+          ylabel('var(MI)');
           title({'Mutual information variance',['Seizure ',num2str(sIdx),' from ',...
             sSigName,' at ',num2str(absStartTime),'s, Averaging win. size: ',...
             num2str(sDuration),'s, MI Win. size: ',num2str(miWindowSize),'s']});
@@ -183,9 +239,22 @@ function eegProcByPatients()
           f=figure('Visible','Off');
           set(f,'PaperPositionMode','auto');
           set(f, 'Position', [0 100 1350 400]);
-          set(f,'DefaultAxesLooseInset',[0,0,0,0]);
+          set(f,'DefaultAxesLooseInset',[0,0.1,0,0]);
           boxplot(miDiffBox,shiftLabels);
-          ylabel('MI');
+          set(gca,'XTick',1:numel(shiftLabels),'XTickLabel',shiftLabels);
+          XTickLabel = get(gca,'XTickLabel');
+          set(gca,'XTickLabel',' ');
+          hxLabel = get(gca,'XLabel');
+          set(hxLabel,'Units','data');
+          xLabelPosition = get(hxLabel,'Position');
+          y = xLabelPosition(2);
+          XTick = get(gca,'XTick');
+          y=repmat(y,length(XTick),1);
+          fs = get(gca,'fontsize');
+          hText = text(XTick, y, XTickLabel,'fontsize',fs);
+          set(hText,'Rotation',90,'HorizontalAlignment','right');
+          
+          ylabel('diff(MI)');
           title({'Mutual information diff',['Seizure ',num2str(sIdx),' from ',...
             sSigName,' at ',num2str(absStartTime),'s, Averaging win. size: ',...
             num2str(sDuration),'s, MI Win. size: ',num2str(miWindowSize),'s']});
@@ -227,16 +296,57 @@ function eegProcByPatients()
             end
             testMi(idxM(tmp),idxN(tmp),:)=redColor;
           end
+          
+          testMiFull=zeros(length(shiftLabels),length(shiftLabels),3)+0.5;
+          for rowIdx=1:length(shiftLabels)
+            for colIdx=1:length(shiftLabels)
+              if (mi(1,rowIdx)~=0 && mi(1,colIdx)~=0)
+                testMiFull(rowIdx,colIdx,1:3)=kstest2(mi(:,rowIdx),mi(:,colIdx));
+              end
+            end
+          end
+          figure
+          imagesc(testMiFull);
+          set(gca,'YTick',1:numel(shiftLabels),'XTick',1:numel(shiftLabels), ...
+            'XTickLabel',shiftLabels,'YTickLabel',shiftLabels);
+          title({'Tests for MI',['Seizure ',num2str(sIdx),' from ',...
+            sSigName,' at ',num2str(absStartTime),'s, Averaging win. size: ',...
+            num2str(sDuration),'s, MI Win. size: ',num2str(miWindowSize),'s. ', ...
+            '1 - white, 0 - black, NaN - red.']});     
+          XTickLabel = get(gca,'XTickLabel');
+          set(gca,'XTickLabel',' ');
+          hxLabel = get(gca,'XLabel');
+          set(hxLabel,'Units','data');
+          xLabelPosition = get(hxLabel,'Position');
+          y = xLabelPosition(2)-0.7;
+          XTick = get(gca,'XTick');
+          y=repmat(y,length(XTick),1);
+          fs = get(gca,'fontsize');
+          hText = text(XTick, y, XTickLabel,'fontsize',fs);
+          set(hText,'Rotation',90,'HorizontalAlignment','right');
             
+          %% Plot tests results
           f=figure('Visible','On');
           set(f,'PaperPositionMode','auto');
-          set(f, 'Position', [0 100 1350 600]);
-          set(f,'DefaultAxesLooseInset',[0,0,0,0]);
+          set(f,'Position',[0 60 1350 650]);
+          set(f,'DefaultAxesLooseInset',[0,0.1,0,0]);
           subplot(3,1,1);
           imagesc(testMi);
           colormap(gray);
           set(gca,'YTick',1:4,'YTickLabel',testLabels,'XTick',1:numel(shiftLabels), ...
             'XTickLabel',shiftLabels);
+          XTickLabel = get(gca,'XTickLabel');
+          set(gca,'XTickLabel',' ');
+          hxLabel = get(gca,'XLabel');
+          set(hxLabel,'Units','data');
+          xLabelPosition = get(hxLabel,'Position');
+          y = xLabelPosition(2)-0.7;
+          XTick = get(gca,'XTick');
+          y=repmat(y,length(XTick),1);
+          fs = get(gca,'fontsize');
+          hText = text(XTick, y, XTickLabel,'fontsize',fs);
+          set(hText,'Rotation',90,'HorizontalAlignment','right');
+          
           title({'Tests for MI',['Seizure ',num2str(sIdx),' from ',...
             sSigName,' at ',num2str(absStartTime),'s, Averaging win. size: ',...
             num2str(sDuration),'s, MI Win. size: ',num2str(miWindowSize),'s. ', ...
@@ -247,6 +357,18 @@ function eegProcByPatients()
           colormap(gray);
           set(gca,'YTick',1:4,'YTickLabel',testLabels,'XTick',1:numel(shiftLabels), ...
             'XTickLabel',shiftLabels);
+          XTickLabel = get(gca,'XTickLabel');
+          set(gca,'XTickLabel',' ');
+          hxLabel = get(gca,'XLabel');
+          set(hxLabel,'Units','data');
+          xLabelPosition = get(hxLabel,'Position');
+          y = xLabelPosition(2)-0.6;
+          XTick = get(gca,'XTick');
+          y=repmat(y,length(XTick),1);
+          fs = get(gca,'fontsize');
+          hText = text(XTick, y, XTickLabel,'fontsize',fs);
+          set(hText,'Rotation',90,'HorizontalAlignment','right');
+          
           title('Tests for MI var');
           grid minor;
           subplot(3,1,3);
@@ -254,6 +376,18 @@ function eegProcByPatients()
           colormap(gray);
           set(gca,'YTick',1:4,'YTickLabel',testLabels,'XTick',1:numel(shiftLabels), ...
             'XTickLabel',shiftLabels);
+          XTickLabel = get(gca,'XTickLabel');
+          set(gca,'XTickLabel',' ');
+          hxLabel = get(gca,'XLabel');
+          set(hxLabel,'Units','data');
+          xLabelPosition = get(hxLabel,'Position');
+          y = xLabelPosition(2)-0.6;
+          XTick = get(gca,'XTick');
+          y=repmat(y,length(XTick),1);
+          fs = get(gca,'fontsize');
+          hText = text(XTick, y, XTickLabel,'fontsize',fs);
+          set(hText,'Rotation',90,'HorizontalAlignment','right');
+          
           title('Tests for MI diff');
           grid minor;
           savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'],['Tests_Sz',num2str(sIdx),'_win', ...
@@ -261,7 +395,7 @@ function eegProcByPatients()
           savePlot2File(f,'fig',[reportwpath,'/',dirs{i},'/'],['Tests_Sz',num2str(sIdx),'_win', ...
             num2str(miWindowSize)]);
 
-          % Store calculated data
+          %% Store calculated data
           saveWrapper([reportwpath,'/',dirs{i},'/','Mi_Sz',num2str(sIdx),'_win', ...
             num2str(miWindowSize),'.mat'],mi,miVar,miSur,miVarSur,miDiff);
           if (numel(mi)>0)
@@ -299,7 +433,7 @@ function eegProcByPatients()
           cntBuf(j)=cnt;
         end
         
-        % Using only median kernel elements for boxplot
+        %% Using only median kernel elements for boxplot
         if (medianCoef<1 && medianCoef>0)
           elNum=round(size(miAv,1)*medianCoef);
           skipNum=round((size(miAv,1)-elNum)/2);
@@ -320,12 +454,24 @@ function eegProcByPatients()
           miDiffAvBox=miDiff;
         end
           
-        % Plot results for current PATIENT
+        %% Plot results for current PATIENT
         f=figure('Visible','Off');
         set(f,'PaperPositionMode','auto');
         set(f, 'Position', [0 100 1350 400]);
         set(f,'DefaultAxesLooseInset',[0,0,0,0]);
         boxplot(miAvBox,shiftLabels);
+        set(gca,'XTick',1:numel(shiftLabels),'XTickLabel',shiftLabels);
+        XTickLabel = get(gca,'XTickLabel');
+        set(gca,'XTickLabel',' ');
+        hxLabel = get(gca,'XLabel');
+        set(hxLabel,'Units','data');
+        xLabelPosition = get(hxLabel,'Position');
+        y = xLabelPosition(2);
+        XTick = get(gca,'XTick');
+        y=repmat(y,length(XTick),1);
+        fs = get(gca,'fontsize');
+        hText = text(XTick, y, XTickLabel,'fontsize',fs);
+        set(hText,'Rotation',90,'HorizontalAlignment','right');
         ylabel('MI');
         title({'Mutual information',['All seizures, MI Win. size: ', ...
           num2str(miWindowSize),'s']});
@@ -338,6 +484,18 @@ function eegProcByPatients()
         set(f, 'Position', [0 100 1350 400]);
         set(f,'DefaultAxesLooseInset',[0,0,0,0]);
         boxplot(miVarAvBox,shiftLabels);
+        set(gca,'XTick',1:numel(shiftLabels),'XTickLabel',shiftLabels);
+        XTickLabel = get(gca,'XTickLabel');
+        set(gca,'XTickLabel',' ');
+        hxLabel = get(gca,'XLabel');
+        set(hxLabel,'Units','data');
+        xLabelPosition = get(hxLabel,'Position');
+        y = xLabelPosition(2);
+        XTick = get(gca,'XTick');
+        y=repmat(y,length(XTick),1);
+        fs = get(gca,'fontsize');
+        hText = text(XTick, y, XTickLabel,'fontsize',fs);
+        set(hText,'Rotation',90,'HorizontalAlignment','right');
         ylabel('MI');
         title({'Mutual information variance',['All seizures, MI Win. size: ', ...
           num2str(miWindowSize),'s']});
@@ -350,6 +508,18 @@ function eegProcByPatients()
         set(f, 'Position', [0 100 1350 400]);
         set(f,'DefaultAxesLooseInset',[0,0,0,0]);
         boxplot(miDiffAvBox,shiftLabels);
+        set(gca,'XTick',1:numel(shiftLabels),'XTickLabel',shiftLabels);
+        XTickLabel = get(gca,'XTickLabel');
+        set(gca,'XTickLabel',' ');
+        hxLabel = get(gca,'XLabel');
+        set(hxLabel,'Units','data');
+        xLabelPosition = get(hxLabel,'Position');
+        y = xLabelPosition(2);
+        XTick = get(gca,'XTick');
+        y=repmat(y,length(XTick),1);
+        fs = get(gca,'fontsize');
+        hText = text(XTick, y, XTickLabel,'fontsize',fs);
+        set(hText,'Rotation',90,'HorizontalAlignment','right');
         ylabel('MI');
         title({'Mutual information diff',['All seizures, MI Win. size: ', ...
           num2str(miWindowSize),'s']});
@@ -362,7 +532,7 @@ function eegProcByPatients()
         saveWrapper([reportwpath,'/',dirs{i},'/MI_Total_win', ...
           num2str(miWindowSize),'.mat'],miAv,miVarAv,miDiffAv);
         
-        % Tests
+        %% Tests
         testLabels={'kstest','kstest2','ttest2','ranksum'};
         testMi=zeros(4,length(shiftLabels))+0.5;
         testMiVar=zeros(4,length(shiftLabels))+0.5;
@@ -399,13 +569,24 @@ function eegProcByPatients()
 
         f=figure('Visible','On');
         set(f,'PaperPositionMode','auto');
-        set(f, 'Position', [0 100 1350 600]);
+        set(f,'Position',[0 100 1350 600]);
         set(f,'DefaultAxesLooseInset',[0,0,0,0]);
         subplot(3,1,1);
         imagesc(testMi);
         colormap(gray);
         set(gca,'YTick',1:4,'YTickLabel',testLabels,'XTick',1:numel(shiftLabels), ...
           'XTickLabel',shiftLabels);
+        XTickLabel = get(gca,'XTickLabel');
+        set(gca,'XTickLabel',' ');
+        hxLabel = get(gca,'XLabel');
+        set(hxLabel,'Units','data');
+        xLabelPosition = get(hxLabel,'Position');
+        y = xLabelPosition(2)-0.7;
+        XTick = get(gca,'XTick');
+        y=repmat(y,length(XTick),1);
+        fs = get(gca,'fontsize');
+        hText = text(XTick, y, XTickLabel,'fontsize',fs);
+        set(hText,'Rotation',90,'HorizontalAlignment','right');
         title({'Tests for MI',['All seizures, MI Win. size: ', ...
           num2str(miWindowSize),'s. 1 - white, 0 - black, NaN - red.']});
         grid minor;
@@ -414,6 +595,17 @@ function eegProcByPatients()
         colormap(gray);
         set(gca,'YTick',1:4,'YTickLabel',testLabels,'XTick',1:numel(shiftLabels), ...
           'XTickLabel',shiftLabels);
+        XTickLabel = get(gca,'XTickLabel');
+        set(gca,'XTickLabel',' ');
+        hxLabel = get(gca,'XLabel');
+        set(hxLabel,'Units','data');
+        xLabelPosition = get(hxLabel,'Position');
+        y = xLabelPosition(2)-0.6;
+        XTick = get(gca,'XTick');
+        y=repmat(y,length(XTick),1);
+        fs = get(gca,'fontsize');
+        hText = text(XTick, y, XTickLabel,'fontsize',fs);
+        set(hText,'Rotation',90,'HorizontalAlignment','right');
         title('Tests for MI var');
         grid minor;
         subplot(3,1,3);
@@ -421,6 +613,17 @@ function eegProcByPatients()
         colormap(gray);
         set(gca,'YTick',1:4,'YTickLabel',testLabels,'XTick',1:numel(shiftLabels), ...
           'XTickLabel',shiftLabels);
+        XTickLabel = get(gca,'XTickLabel');
+        set(gca,'XTickLabel',' ');
+        hxLabel = get(gca,'XLabel');
+        set(hxLabel,'Units','data');
+        xLabelPosition = get(hxLabel,'Position');
+        y = xLabelPosition(2)-0.6;
+        XTick = get(gca,'XTick');
+        y=repmat(y,length(XTick),1);
+        fs = get(gca,'fontsize');
+        hText = text(XTick, y, XTickLabel,'fontsize',fs);
+        set(hText,'Rotation',90,'HorizontalAlignment','right');
         title('Tests for MI diff');
         grid minor;
         savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'],['TestsAll_win', ...
@@ -434,6 +637,17 @@ function eegProcByPatients()
         set(f,'DefaultAxesLooseInset',[0,0,0,0]);
         bar(cntBuf);
         set(gca,'XTickLabel',shiftLabels,'XTick',1:numel(shiftLabels));
+        XTickLabel = get(gca,'XTickLabel');
+        set(gca,'XTickLabel',' ');
+        hxLabel = get(gca,'XLabel');
+        set(hxLabel,'Units','data');
+        xLabelPosition = get(hxLabel,'Position');
+        y = xLabelPosition(2)-0.1;
+        XTick = get(gca,'XTick');
+        y=repmat(y,length(XTick),1);
+        fs = get(gca,'fontsize');
+        hText = text(XTick, y, XTickLabel,'fontsize',fs);
+        set(hText,'Rotation',90,'HorizontalAlignment','right');
         title('Number of probes in averaging in av.MI for patient');
         grid on;
         savePlot2File(f,'png',[reportwpath,'/',dirs{i},'/'], ...
