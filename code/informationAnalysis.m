@@ -261,7 +261,7 @@ classdef informationAnalysis < handle
       obj.miChNum=sum(1:(numel(sigIdxBuf)-1));
 
       % Calculate MI for all channels
-      disp(['Calculating MI at ',num2str(sStartTime),'s.']);
+      ddisp(['Calculating MI at ',num2str(sStartTime),'s.'],0);
       halfWinSz=round(miWindowSize*s.eegFs/2);
       samplesBuf=(sStartTime*s.eegFs+halfWinSz+1):round(s.eegFs*obj.miFs): ...
               ((sStartTime+sDuration)*s.eegFs-halfWinSz+1);
