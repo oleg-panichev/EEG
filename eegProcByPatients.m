@@ -27,14 +27,18 @@ function eegProcByPatients()
   % Processing parameters
   windowSizesBuf=[0.5]; % Seconds
   avWinDuration=0.5; % Large window size, seconds
-  shiftBuf=[14400,12600,10800,9000,7200:-300:3600,3300:-300:30]; % Backshift values from seizure, seconds
+  shiftBuf=[3600:-150:30]; % Backshift values from seizure, seconds
   patientsIdxBuf=[1,3,4,5,8,9,10,15,18,19,20,23];
   medianCoef=0.9; 
+  nOfInterIctal=16;
   
   totalTime=0;
-  shiftLabels=cell(1,numel(shiftBuf));
-  for i=1:numel(shiftBuf)
-    shiftLabels{i}=num2str(round(shiftBuf(i)/60*100)/100);
+  shiftLabels=cell(1,numel(shiftBuf)+nOfInterIctal);
+  for i=1:nOfInterIctal
+    shiftLabels{i}=['II',num2str(i)];
+  end
+  for i=1+nOfInterIctal:numel(shiftBuf)+nOfInterIctal
+    shiftLabels{i}=num2str(round(shiftBuf(i-nOfInterIctal)/60*100)/100);
   end
   shiftLabels{i+1}='Pre';
   shiftLabels{i+2}='SZ1';
@@ -81,6 +85,34 @@ function eegProcByPatients()
       miAllSz=cell(nOfSeizures,1);
       miDistanceAllSz=cell(nOfSeizures,1);
       
+      % Calculate MI during the seizure and right before the seizure
+      sigIdxBuf=p.signalsAll{1,5}(1:p.minChNum);
+      % Calculate number of interconnected channels
+      miChNum=sum(1:(numel(sigIdxBuf)-1));
+      
+      % Calculate inter-ictal MI for patient     
+      miInterIctal=zeros(miChNum,nOfInterIctal);
+      miInterIctalSur=zeros(miChNum,nOfInterIctal);
+      sigIdx=[];
+      for tmp=2:length(p.signalsAll)-1
+        if (p.signalsAll{tmp-1,4}==0 && p.signalsAll{tmp,4}==0 && p.signalsAll{tmp+1,4}==0)
+          sigIdx=[sigIdx,tmp];
+        end
+      end
+      for tmp=1:2:nOfInterIctal
+        circleIdx=mod(tmp,length(sigIdx));
+        disp(['Processing ',dirs{i},'/',p.signalsAll{sigIdx(circleIdx),1}]);
+        s=loadRecord(wpath,[dirs{i},'/',p.signalsAll{sigIdx(circleIdx),1}],subjectInfoFileName,...
+          1,1,1);
+        ia=informationAnalysis(s);
+        startTime=p.signalsAll{sigIdx(circleIdx),3}*0.25;
+        [miInterIctal(:,tmp),~,miInterIctalSur(:,tmp),~,~]=...
+          ia.windowedShortTimeMi(s,sigIdxBuf,startTime,avWinDuration,miWindowSize);
+        startTime=p.signalsAll{sigIdx(circleIdx),3}*0.75;
+        [miInterIctal(:,tmp+1),~,miInterIctalSur(:,tmp+1),~,~]=...
+          ia.windowedShortTimeMi(s,sigIdxBuf,startTime,avWinDuration,miWindowSize);
+      end 
+      
       for k=seizuresSigIdx
         % Load signal with seizure for proccessing
         disp(['Loading signal with seizure ',p.signalsAll{k,1},'...']);
@@ -93,6 +125,7 @@ function eegProcByPatients()
         if numel(goog_seizures_idx)==0
           disp('There are no good seizures!');
         end
+     
         for m=goog_seizures_idx
           if (k~=idxPrev)
             disp(['Loading signal with seizure ',p.signalsAll{k,1},'...']);
@@ -102,14 +135,11 @@ function eegProcByPatients()
           sStartTime=s.seizureTimings(m,1);
 
           ia=informationAnalysis(s);
-          % Calculate MI during the seizure and right before the seizure
-          sigIdxBuf=p.signalsAll{k,5}(1:p.minChNum);
-          % Calculate number of interconnected channels
-          miChNum=sum(1:(numel(sigIdxBuf)-1));
-          mi=zeros(miChNum,numel(shiftBuf)+4);
-          miVar=zeros(miChNum,numel(shiftBuf)+4);
-          miSur=zeros(miChNum,numel(shiftBuf)+4);
-          miVarSur=zeros(miChNum,numel(shiftBuf)+4);
+          
+          mi=zeros(miChNum,numel(shiftBuf)+nOfInterIctal+4);
+          miSur=zeros(miChNum,numel(shiftBuf)+nOfInterIctal+4);
+          mi(:,1:nOfInterIctal)=miInterIctal;
+          miSur(:,1:nOfInterIctal)=miInterIctalSur;
           
           % Seizure and preseizure
           sDuration=s.seizureTimings(m,2)-s.seizureTimings(m,1);
@@ -119,15 +149,14 @@ function eegProcByPatients()
           else
             sSkipSec=0;
           end
-          [mi(:,end),miVar(:,end),miSur(:,end),miVarSur(:,end),miLabels]= ...
+          [mi(:,end),~,miSur(:,end),~,miLabels]= ...
             ia.windowedShortTimeMi(s,sigIdxBuf,(sStartTime+sSkipSec+2),avWinDuration,miWindowSize);
-          [mi(:,end-1),miVar(:,end-1),miSur(:,end-1),miVarSur(:,end-1),~]= ...
+          [mi(:,end-1),~,miSur(:,end-1),~,~]= ...
             ia.windowedShortTimeMi(s,sigIdxBuf,(sStartTime+sSkipSec+1),avWinDuration,miWindowSize);
-          [mi(:,end-2),miVar(:,end-2),miSur(:,end-2),miVarSur(:,end-2),~]= ...
+          [mi(:,end-2),~,miSur(:,end-2),~,~]= ...
             ia.windowedShortTimeMi(s,sigIdxBuf,(sStartTime+sSkipSec),avWinDuration,miWindowSize);
-          [mi(:,end-3),miVar(:,end-3),miSur(:,end-3),miVarSur(:,end-3),~]= ...
-            ia.windowedShortTimeMi(s,sigIdxBuf,(sStartTime-5),avWinDuration, ...
-            miWindowSize);
+          [mi(:,end-3),~,miSur(:,end-3),~,~]= ...
+            ia.windowedShortTimeMi(s,sigIdxBuf,(sStartTime-5),avWinDuration,miWindowSize);
 
           % Calculating MI with shifts back before seizure and abs(diff(MI))
           tmp=numel(shiftBuf);
@@ -136,7 +165,7 @@ function eegProcByPatients()
           while tmp>0
             startTime=absStartTime-shiftBuf(tmp);
             if (startTime > prevSeizureStartTime)
-              [mi(:,tmp),miVar(:,tmp),miSur(:,tmp),miVarSur(:,tmp),~,s,idxPrev]=...
+              [mi(:,tmp+nOfInterIctal),~,miSur(:,tmp+nOfInterIctal),~,~,s,idxPrev]=...
                 calcShiftedMi(ia,s,p,startTime,avWinDuration,miWindowSize,...
                 idxPrev,wpath,dirs{i},subjectInfoFileName);         
             else
@@ -316,40 +345,4 @@ function eegProcByPatients()
   if (parallelFlag>0)
     delete(gcp);
   end
-end
-
-function [mi,miVar,miSur,miVarSur,miLabels,s,idxPrev]=calcShiftedMi(ia,s,p,startTime,sDuration, ...
-  miWindowSize,idxPrev,wpath,pdir,subjectInfoFileName)
-  % Calculate number of interconnected channels 
-  miChNum=sum(1:(p.minChNum-1));
-  
-  mi=zeros(miChNum,1);
-  miVar=zeros(miChNum,1);
-  miSur=zeros(miChNum,1);
-  miVarSur=zeros(miChNum,1);
-  miLabels=[];
-  n=1;
-  while (p.signalsAll{n,2}<startTime && n<size(p.signalsAll,1))
-    n=n+1;
-  end
-  sigNum=size(p.signalsAll,1);
-  if (n<=sigNum)
-    idx=n-1;
-  else
-    idx=sigNum;
-  end 
-  if (idx~=idxPrev)
-    disp(['Processing ',pdir,'/',p.signalsAll{idx,1}]);
-    s=loadRecord(wpath,[pdir,'/',p.signalsAll{idx,1}],subjectInfoFileName,...
-      1,1,1);
-  end
-  startTime=startTime-p.signalsAll{idx,2};
-  if (startTime+sDuration-s.records<11)
-    if (startTime+sDuration>=s.records)
-      startTime=s.records-sDuration-miWindowSize-1;
-    end
-    sigIdxBuf=p.signalsAll{idx,5}(1:p.minChNum);
-    [mi,miVar,miSur,miVarSur,miLabels]=ia.windowedShortTimeMi(s,sigIdxBuf,startTime,sDuration,miWindowSize);
-  end
-  idxPrev=idx;
 end
