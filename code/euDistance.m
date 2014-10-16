@@ -1,6 +1,6 @@
-% Function to calculate distance between two points in N-dimentional space.
+% Function to calculate Euclidian distance between two points in N-dimentional space.
 %
-function d=distance(x,y)
+function d=euDistance(x,y)
   d=0;
   if (length(x)==length(y))
     d=sqrt(sum((x-y).^2));
