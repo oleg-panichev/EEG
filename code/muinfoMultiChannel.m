@@ -28,7 +28,7 @@ function [miBuf,miSurBuf,miLabels]=muinfoMultiChannel(signal,sStartIdx, ...
       permData=permData(randperm(length(permData)));
       miSurBuf(chIdx)=muinfo(signal(k,sStartIdx:sStartIdx+miWindowSize),permData);   
 
-      miLabels{chIdx}=([channelNames{k},'-',channelNames{j}]);
+      miLabels{chIdx}=([num2str(k),'-',num2str(j)]);
       chIdx=chIdx+1;
     end
   end

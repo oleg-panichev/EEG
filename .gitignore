@@ -1,3 +1,5 @@
+/eeg_data/*
 /kaggle_reports/*
 /toolboxes/*
 */*.asv
+*.asv
