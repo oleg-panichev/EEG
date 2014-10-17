@@ -3,7 +3,7 @@ addpath('classes');
 addpath('plot');
 prepareWorkspace();
 
-run('properties.m');
+run('processingProperties.m');
 
 % Data location
 wpath='eeg_data/aes_spc/'; % Directory containing db
@@ -31,17 +31,15 @@ for patIdx=1:numel(patBuf)
   dirs={items.name};
   piBuf=dirs(3:end);
   piNum=numel(piBuf);
-  nOfObservations=2*piNum;  
+   
   s=load([wpath,'/',patBuf{patIdx},'/pi/',piBuf{1}]);
   names = fieldnames(s);
   s=eval(['s.',names{1}]);
-  
-  % Observation labels
-  xLabels=cell(1,nOfObservations);
-  for i=1:piNum
-    xLabels{i}=['PI',num2str(i)];
-    xLabels{i+piNum}=['II',num2str(i)];
-  end
+  items=dir([wpath,'/',patBuf{patIdx},'/ii/']);
+  dirs={items.name};
+  iiBuf=dirs(3:end);
+  iiNum=numel(iiBuf);    
+  nOfObservations=piNum+iiNum; 
   
   %Processing preictal data
   disp([piBuf{1},'...']);
@@ -62,11 +60,7 @@ for patIdx=1:numel(patBuf)
   end
   
   % Processing interictal data
-  items=dir([wpath,'/',patBuf{patIdx},'/ii/']);
-  dirs={items.name};
-  iiBuf=dirs(3:end);
-  iiNum=numel(iiBuf);  
-  for i=1:piNum
+  for i=1:iiNum
     disp([iiBuf{i},'...']);
     s=load([wpath,'/',patBuf{patIdx},'/ii/',iiBuf{i}]);
     names=fieldnames(s);
@@ -75,6 +69,57 @@ for patIdx=1:numel(patBuf)
     featureIdx=featureIdx+1;
   end
   
+  % Observation labels
+  xLabels=cell(1,nOfObservations);
+  for i=1:nOfObservations
+    if (i<=piNum)
+      xLabels{i}=['PI',num2str(i)];
+    else
+      xLabels{i}=['II',num2str(i-piNum)];
+    end
+  end
+  
+  figure
+  features=var(featuresBuf,1,1);
+  plot(features)
+  mean(features(1:30))
+  mean(features(31:end))
+  
+  figure
+  features=[mean(featuresBuf,1);var(featuresBuf,1,1)];
+  plot(features(1,1:30),features(2,1:30),'r.'); hold on;
+  plot(features(1,31:end),features(2,31:end),'b.');
+  
+  
+  figure
+  idx=1;
+  for i=1:6
+    hx(i)=subplot(1,7,i*idx);
+    bp=boxplot(features(2,[i+6*(0:4)]));
+    set(bp,'linewidth',2);
+    title(['Preictal var. ',num2str(i)]);
+    grid on;
+  end
+  hx(7)=subplot(1,7,7);
+  bp=boxplot(features(2,31:end));
+  set(bp,'linewidth',2);
+  title('Interictal variance');
+  grid on;
+  linkaxes(hx,'y');
+  
+  figure
+  clear hx;
+  hx(1)=subplot(1,2,1);
+  bp=boxplot(features(2,1:30));
+  set(bp,'linewidth',2);
+  title(['Preictal var. ',num2str(i)]);
+  grid on;
+  hx(2)=subplot(1,2,2);
+  bp=boxplot(features(2,31:end));
+  set(bp,'linewidth',2);
+  title('Interictal variance');
+  grid on;
+  linkaxes(hx,'y');
   
 %   % Feature reduction
 %   avPi=mean(featuresBuf(:,1:60),2);
@@ -87,14 +132,14 @@ for patIdx=1:numel(patBuf)
 %   featuresBuf=featuresBuf(I(end-10:end),:);
 %   miLabels=miLabels(I(end-10:end));
   
-  % Plot MI 
-  titleStr=({'MI between channels'});
+  % Plot features 
+  titleStr=({'Features'});
   f=plotData(featuresBuf,xLabels,yLabels,titleStr);
   savePlot2File(f,'png',[reportwpath,'/',patBuf{patIdx},'/'],['MI_Image_miWinSz',num2str(miWindowSize),'s']);
   savePlot2File(f,'fig',[reportwpath,'/',patBuf{patIdx},'/'],['MI_Image_miWinSz',num2str(miWindowSize),'s']);
           
   % Boxplots        
-  titleStr={['Mutual information, ',patBuf{patIdx}],['miWindowSize = ',...
+  titleStr={['Features, ',patBuf{patIdx}],['miWindowSize = ',...
     num2str(miWindowSize),'s']};
   f=plotDataBoxplot(featuresBuf,xLabels,titleStr);
   savePlot2File(f,'png',[reportwpath,'/',patBuf{patIdx},'/'],...
@@ -140,6 +185,56 @@ for patIdx=1:numel(patBuf)
   plot(iipiDeu,iipiDchsq,'r.'); hold on;
   legend('pi-pi','ii-ii','ii-pi');
 end
+
+% Analysis
+p=randperm(30);
+trainPI=featuresBuf(p(1:21));
+testPI=featuresBuf(p(22:30));
+
+y=[ones(30,1);zeros(450,1)];
+th=[0.5:0.1:2].*1e5;
+acuuracy==zeros(size(th));
+precision=zeros(size(th));
+recall=zeros(size(th));
+F1=zeros(size(th));
+idx=1;
+for i=th
+  res=features(2,:)<i;
+  TP=0;
+  FP=0;
+  FN=0;
+  TN=0;
+  for m=1:length(y)
+    if (y(m)==1 && res(m)==1)
+      TP=TP+1;
+    elseif (y(m)==0 && res(m)==1)
+      FP=FP+1;
+    elseif (y(m)==1 && res(m)==0)
+      FN=FN+1;
+    elseif (y(m)==0 && res(m)==0)
+      TN=TN+1;
+    end
+  end
+  accuracy(idx)=(TP+TN)/numel(y);
+  precision(idx)=TP/(TP+FP);
+  recall(idx)=TP/(TP+FN);
+  F1(idx)=2*precision(idx)*recall(idx)/(precision(idx)+recall(idx));
+  idx=idx+1;
+end
+
+figure
+subplot(2,2,1);
+plot(th,accuracy,'Linewidth',2);
+ylabel('Accuracy'); xlabel('threshold'); grid on;
+subplot(2,2,2);
+plot(th,precision,'Linewidth',2);
+ylabel('Precesion'); xlabel('threshold'); grid on;
+subplot(2,2,3);
+plot(th,recall,'Linewidth',2);
+ylabel('Recall'); xlabel('threshold'); grid on;
+subplot(2,2,4);
+plot(th,F1,'Linewidth',2);
+ylabel('F1 score'); xlabel('threshold'); grid on;
 
 % Prepare all features
 for patIdx=1:numel(patBuf)
