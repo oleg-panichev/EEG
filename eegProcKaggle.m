@@ -5,19 +5,18 @@ prepareWorkspace();
 
 run('processingProperties.m');
 
-% Data location
-wpath='eeg_data/aes_spc/'; % Directory containing db
-reportwpath='kaggle_reports/';
-
 % Prepare report dir
 if (~exist(reportwpath,'dir'))
   mkdir(reportwpath);
 end
 
-% List of patients
+% Load list of patients
 items=dir(wpath);
 dirs={items([items.isdir]).name};
 patBuf=dirs(3:end);
+
+X=[]; % Total features matrix
+Y=[]; % Total output matrix
 
 % Data and features research
 for patIdx=1:numel(patBuf)
@@ -30,7 +29,7 @@ for patIdx=1:numel(patBuf)
   items=dir([wpath,'/',patBuf{patIdx},'/pi/']);
   dirs={items.name};
   piBuf=dirs(3:end);
-  piNum=numel(piBuf);
+  piNum=numel(piBuf); % Number of preictal signals to process 
    
   s=load([wpath,'/',patBuf{patIdx},'/pi/',piBuf{1}]);
   names = fieldnames(s);
@@ -38,7 +37,7 @@ for patIdx=1:numel(patBuf)
   items=dir([wpath,'/',patBuf{patIdx},'/ii/']);
   dirs={items.name};
   iiBuf=dirs(3:end);
-  iiNum=numel(iiBuf);    
+  iiNum=90; %numel(iiBuf); % Number of interictal signals to process    
   nOfObservations=piNum+iiNum; 
   
   %Processing preictal data
@@ -50,9 +49,9 @@ for patIdx=1:numel(patBuf)
   featuresBuf=zeros(numel(features),nOfObservations);
   featuresBuf(:,1)=features;
   featureIdx=2;
-  for n=2:piNum
-    disp([piBuf{n},'...']);
-    s=load([wpath,'/',patBuf{patIdx},'/pi/',piBuf{n}]);
+  for i=2:piNum
+    disp([piBuf{i},'...']);
+    s=load([wpath,'/',patBuf{patIdx},'/pi/',piBuf{i}]);
     names = fieldnames(s);
     s=eval(['s.',names{1}]);
     [featuresBuf(:,featureIdx),~]=prepareFeatures(s);
@@ -79,31 +78,29 @@ for patIdx=1:numel(patBuf)
     end
   end
   
-  figure
-  features=var(featuresBuf,1,1);
-  plot(features)
-  mean(features(1:30))
-  mean(features(31:end))
+  % Analyze features
+  disp(['Mean preictal value: ',num2str(mean(features(1:30)))]);
+  disp(['Mean interictal value: ',num2str(mean(features(31:end)))]);
   
-  figure
+  f=figure;
   features=[mean(featuresBuf,1);var(featuresBuf,1,1)];
   plot(features(1,1:30),features(2,1:30),'r.'); hold on;
-  plot(features(1,31:end),features(2,31:end),'b.');
+  plot(features(1,31:end),features(2,31:end),'b.');  
   
-  
-  figure
-  idx=1;
+  f=figure;
   for i=1:6
-    hx(i)=subplot(1,7,i*idx);
-    bp=boxplot(features(2,[i+6*(0:4)]));
+    hx(i)=subplot(1,7,i);
+    titleStr={'Preictal','Variance'};
+    bp=boxplot(features(2,[i+6*(0:4)]),[num2str((i-1)*10),'-',num2str(i*10)]);
+    title(titleStr);
     set(bp,'linewidth',2);
-    title(['Preictal var. ',num2str(i)]);
     grid on;
   end
   hx(7)=subplot(1,7,7);
+  titleStr={'Interictal','Variance'};
   bp=boxplot(features(2,31:end));
   set(bp,'linewidth',2);
-  title('Interictal variance');
+  title(titleStr);
   grid on;
   linkaxes(hx,'y');
   
@@ -152,89 +149,70 @@ for patIdx=1:numel(patBuf)
   savePlot2File(f,'png',[reportwpath,'/',patBuf{patIdx},'/'],['MI_Distance_miWinSz=', ...
     num2str(miWindowSize),'s']);
   
-  piDeu=[];
-  piDchsq=[];
-  for m=1:nOfObservations/2
-    for n=m+1:nOfObservations/2
-      piDeu=[piDeu,euDist(n,m)];
-      piDchsq=[piDchsq,chsqDist(n,m)];
-    end
-  end
-  
-  iiDeu=[];
-  iiDchsq=[];
-  for m=nOfObservations/2+1:nOfObservations
-    for n=m+1:nOfObservations
-      iiDeu=[iiDeu,euDist(n,m)];
-      iiDchsq=[iiDchsq,chsqDist(n,m)];
-    end
-  end
-  
-  iipiDeu=[];
-  iipiDchsq=[];
-  for m=1:nOfObservations/2
-    for n=nOfObservations/2+1:nOfObservations
-      iipiDeu=[iipiDeu,euDist(n,m)];
-      iipiDchsq=[iipiDchsq,chsqDist(n,m)];
-    end
-  end
-  
-  figure
-  plot(piDeu,piDchsq,'b.'); hold on;
-  plot(iiDeu,iiDchsq,'g.'); hold on;
-  plot(iipiDeu,iipiDchsq,'r.'); hold on;
-  legend('pi-pi','ii-ii','ii-pi');
+  % Store calculated data in total buffers
+  X=[X;featuresBuf'];
+  Y=[Y;ones(piNum,1);zeros(iiNum,1)];
 end
 
 % Analysis
-p=randperm(30);
-trainPI=featuresBuf(p(1:21));
-testPI=featuresBuf(p(22:30));
-
-y=[ones(30,1);zeros(450,1)];
-th=[0.5:0.1:2].*1e5;
-acuuracy==zeros(size(th));
+m=size(X,2);
+N=numel(Y);
+th=[0.5:0.02:2].*1e5;
+accuracy=zeros(size(th));
 precision=zeros(size(th));
 recall=zeros(size(th));
 F1=zeros(size(th));
+TP=zeros(size(th));
+FP=zeros(size(th));
+FN=zeros(size(th));
+TN=zeros(size(th));
 idx=1;
 for i=th
   res=features(2,:)<i;
-  TP=0;
-  FP=0;
-  FN=0;
-  TN=0;
-  for m=1:length(y)
-    if (y(m)==1 && res(m)==1)
-      TP=TP+1;
-    elseif (y(m)==0 && res(m)==1)
-      FP=FP+1;
-    elseif (y(m)==1 && res(m)==0)
-      FN=FN+1;
-    elseif (y(m)==0 && res(m)==0)
-      TN=TN+1;
+  for j=1:N
+    if (Y(j)==1 && res(j)==1)
+      TP(idx)=TP(idx)+1;
+    elseif (Y(j)==0 && res(j)==1)
+      FP(idx)=FP(idx)+1;
+    elseif (Y(j)==1 && res(j)==0)
+      FN(idx)=FN(idx)+1;
+    elseif (Y(j)==0 && res(j)==0)
+      TN(idx)=TN(idx)+1;
     end
   end
-  accuracy(idx)=(TP+TN)/numel(y);
-  precision(idx)=TP/(TP+FP);
-  recall(idx)=TP/(TP+FN);
+  accuracy(idx)=(TP(idx)+TN(idx))/N;
+  precision(idx)=TP(idx)/(TP(idx)+FP(idx));
+  recall(idx)=TP(idx)/(TP(idx)+FN(idx));
   F1(idx)=2*precision(idx)*recall(idx)/(precision(idx)+recall(idx));
   idx=idx+1;
 end
 
-figure
-subplot(2,2,1);
+f=figure;
+set(f,'PaperPositionMode','auto');
+set(f,'Position',[0 100 1200 600]);
+set(f,'DefaultAxesLooseInset',[0,0.1,0,0]);
+subplot(2,3,1);
 plot(th,accuracy,'Linewidth',2);
-ylabel('Accuracy'); xlabel('threshold'); grid on;
-subplot(2,2,2);
+ylabel('Accuracy'); xlabel('threshold'); xlim([th(1) th(end)]); grid on;
+subplot(2,3,2);
 plot(th,precision,'Linewidth',2);
-ylabel('Precesion'); xlabel('threshold'); grid on;
-subplot(2,2,3);
+ylabel('Precision'); xlabel('threshold'); xlim([th(1) th(end)]); grid on;
+subplot(2,3,3);
 plot(th,recall,'Linewidth',2);
-ylabel('Recall'); xlabel('threshold'); grid on;
-subplot(2,2,4);
-plot(th,F1,'Linewidth',2);
-ylabel('F1 score'); xlabel('threshold'); grid on;
+ylabel('Recall'); xlabel('threshold'); xlim([th(1) th(end)]); grid on;
+subplot(2,3,4);
+plot(th,F1,'Linewidth',2); hold on;
+[val,idx]=max(F1);
+plot(th(idx),F1(idx),'r*');
+ylabel('F1 score'); xlabel('threshold'); xlim([th(1) th(end)]); grid on;
+subplot(2,3,5);
+plot(recall,precision,'Linewidth',2);
+ylabel('Precision'); xlabel('Recall'); xlim([recall(1) recall(end)]); grid on;
+subplot(2,3,6);
+bar([1:4],[TP(idx),TN(idx),FP(idx),FN(idx)]./N,'r');
+set(gca,'XTickLabel',{'TP','TN','FP','FN'});
+ylabel('%');
+grid on;
 
 % Prepare all features
 for patIdx=1:numel(patBuf)
