@@ -5,5 +5,5 @@ medianCoef=0.9;
 nOfInterIctal=16;
 
 % Data location
-wpath='eeg_data/aes_spc/'; % Directory containing db
+wpath='D:/eeg db/aes_spc/'; % Directory containing db
 reportwpath='kaggle_reports/';

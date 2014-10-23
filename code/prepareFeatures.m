@@ -14,7 +14,7 @@ function [features,labels]=prepareFeatures(s)
   % Distance
   winSize=60; 
   colIdx=1;
-  tBuf=1:round(300*fs):floor(s.data_length_sec*fs-winSize*fs);
+  tBuf=1:round(60*fs):floor(s.data_length_sec*fs-winSize*fs);
   temp=zeros(sum(1:(numel(s.channels)-1)),numel(tBuf));
   for i=tBuf 
     rowIdx=1;   
@@ -46,7 +46,7 @@ function [features,labels]=prepareFeatures(s)
 %   features=[mean(temp);var(temp)];
 %   [B,I]=sort(temp);
 %   temp=temp(I(25:end-24));
-  features=temp;
+  features=[mean(temp);var(temp);var(temp.^2)];
 %   i=1;
 %   winSize=20;
 %   for m=1:numel(s.channels)
