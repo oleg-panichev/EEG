@@ -16,6 +16,7 @@ dirs={items([items.isdir]).name};
 patBuf=dirs(3:end);
 
 X=[]; % Total features matrix
+I=[]; % Total patient index
 sNamesBuf=[];
 
 % Data and features research
@@ -33,7 +34,9 @@ for patIdx=1:patientsIdxBuf
    
   s=load([wpath,'/',patBuf{patIdx},'/test/',testBuf{1}]);
   names=fieldnames(s);
-  s=eval(['s.',names{1}]);    
+  s=eval(['s.',names{1}]);  
+  
+  I=[I;ones(testNum,1)*patIdx];
   
   %Processing preictal data
   disp([testBuf{1},'...']);
@@ -57,6 +60,7 @@ for patIdx=1:patientsIdxBuf
   X=[X;featuresBuf'];
   sNamesBuf=[sNamesBuf,testBuf];
 end
+
 
 x=X(:,1);
 featureName='Euc Distance mean';

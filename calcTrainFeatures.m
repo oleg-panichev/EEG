@@ -6,8 +6,8 @@ prepareWorkspace();
 run('processingProperties.m');
 
 % Prepare report dir
-if (~exist(reportwpath,'dir'))
-  mkdir(reportwpath);
+if (~exist(reportPath,'dir'))
+  mkdir(reportPath);
 end
 
 % Load list of patients
@@ -18,13 +18,14 @@ patBuf=dirs(3:end);
 X=[]; % Total features matrix
 Y=[]; % Total output matrix
 S=[]; % Total sequence vector
+I=[]; % Total patient index
 
 % Data and features research
 for patIdx=1:numel(patBuf)
-  disp(['Processing: ',patBuf{patIdx}]);
+%   disp(['Processing: ',patBuf{patIdx}]);
   % Prepare report dir for patient
-  if (~exist([reportwpath,patBuf{patIdx}],'dir'))
-    mkdir([reportwpath,patBuf{patIdx}]);
+  if (~exist([reportPath,patBuf{patIdx}],'dir'))
+    mkdir([reportPath,patBuf{patIdx}]);
   end 
   % Load parameters of all patient's signals
   items=dir([wpath,'/',patBuf{patIdx},'/pi/']);
@@ -41,6 +42,8 @@ for patIdx=1:numel(patBuf)
   iiNum=numel(iiBuf); % Number of interictal signals to process    
   nOfObservations=piNum+iiNum;
   sequence=zeros(nOfObservations,1);
+  
+  I=[I;ones(nOfObservations,1)*patIdx];
   
   %Processing preictal data
   disp([piBuf{1},'...']);
@@ -73,15 +76,15 @@ for patIdx=1:numel(patBuf)
     sequence(i+piNum)=s.sequence;
   end
   
-  % Observation labels
-  xLabels=cell(1,nOfObservations);
-  for i=1:nOfObservations
-    if (i<=piNum)
-      xLabels{i}=['PI',num2str(i)];
-    else
-      xLabels{i}=['II',num2str(i-piNum)];
-    end
-  end
+%   % Observation labels
+%   xLabels=cell(1,nOfObservations);
+%   for i=1:nOfObservations
+%     if (i<=piNum)
+%       xLabels{i}=['PI',num2str(i)];
+%     else
+%       xLabels{i}=['II',num2str(i-piNum)];
+%     end
+%   end
   
 %   % Feature reduction
 %   avPi=mean(featuresBuf(:,1:60),2);
@@ -97,21 +100,21 @@ for patIdx=1:numel(patBuf)
   % Plot features 
   titleStr=({'Features'});
   f=plotData(featuresBuf,xLabels,yLabels,titleStr);
-  savePlot2File(f,'png',[reportwpath,'/',patBuf{patIdx},'/'],['MI_Image_miWinSz',num2str(miWindowSize),'s']);
-  savePlot2File(f,'fig',[reportwpath,'/',patBuf{patIdx},'/'],['MI_Image_miWinSz',num2str(miWindowSize),'s']);
+  savePlot2File(f,'png',[reportPath,'/',patBuf{patIdx},'/'],['MI_Image_miWinSz',num2str(miWindowSize),'s']);
+  savePlot2File(f,'fig',[reportPath,'/',patBuf{patIdx},'/'],['MI_Image_miWinSz',num2str(miWindowSize),'s']);
           
   % Boxplots        
   titleStr={['Features, ',patBuf{patIdx}],['miWindowSize = ',...
     num2str(miWindowSize),'s']};
   f=plotDataBoxplot(featuresBuf,xLabels,titleStr);
-  savePlot2File(f,'png',[reportwpath,'/',patBuf{patIdx},'/'],...
+  savePlot2File(f,'png',[reportPath,'/',patBuf{patIdx},'/'],...
     ['MI_BPlot_miWinSz=',num2str(miWindowSize),'s']);
   
   % Distance between MI-points in multidim. space
   [euDist,brcudiss,brcusim,chsqDist,cbDist]=distances(featuresBuf);
   titleStr=['miWindowSize = ',num2str(miWindowSize),'s'];
   f=plotDistances(euDist,brcudiss,chsqDist,cbDist,xLabels,titleStr);
-  savePlot2File(f,'png',[reportwpath,'/',patBuf{patIdx},'/'],['MI_Distance_miWinSz=', ...
+  savePlot2File(f,'png',[reportPath,'/',patBuf{patIdx},'/'],['MI_Distance_miWinSz=', ...
     num2str(miWindowSize),'s']);
   
   % Store calculated data in total buffers
@@ -121,17 +124,18 @@ for patIdx=1:numel(patBuf)
 end
 
 % Feature analysis
-save([trainPath,'y','.mat'],'Y');
-save([trainPath,'s','.mat'],'S');
-x=X(:,1);
-featureName1='Euc Distance mean';
-save([trainPath,featureName,'.mat'],'x');
-x=X(:,2);
-featureName2='Euc Distance variance';
-save([trainPath,featureName,'.mat'],'x');
-x=X(:,3);
-featureName3='Squared Euc Distance variance';
-save([trainPath,featureName,'.mat'],'x');
+% save([trainPath,'y','.mat'],'Y');
+% save([trainPath,'s','.mat'],'S');
+% save([trainPath,'i','.mat'],'I');
+% x=X(:,1);
+% featureName1='Euc Distance mean';
+% save([trainPath,featureName1,'.mat'],'x');
+% x=X(:,2);
+% featureName2='Euc Distance variance';
+% save([trainPath,featureName2,'.mat'],'x');
+% x=X(:,3);
+% featureName3='Squared Euc Distance variance';
+% save([trainPath,featureName3,'.mat'],'x');
 
 analyzeFeature(X(:,1),Y,S,[],featureName1);
 analyzeFeature(X(:,2),Y,S,[],featureName2);
