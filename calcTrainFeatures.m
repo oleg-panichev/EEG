@@ -120,10 +120,21 @@ for patIdx=1:numel(patBuf)
   S=[S;sequence];
 end
 
-save trainFeatures.mat X Y S 
-% Analysis
-analyzeFeature(X(:,1),Y,S,[],'Eu. Distance mean');
-analyzeFeature(X(:,2),Y,S,[],'Eu. Distance variance');
-analyzeFeature(X(:,3),Y,S,[],'Squared Eu. Distance variance');
+% Feature analysis
+save([trainPath,'y','.mat'],'Y');
+save([trainPath,'s','.mat'],'S');
+x=X(:,1);
+featureName1='Euc Distance mean';
+save([trainPath,featureName,'.mat'],'x');
+x=X(:,2);
+featureName2='Euc Distance variance';
+save([trainPath,featureName,'.mat'],'x');
+x=X(:,3);
+featureName3='Squared Euc Distance variance';
+save([trainPath,featureName,'.mat'],'x');
 
-perfcurve
+analyzeFeature(X(:,1),Y,S,[],featureName1);
+analyzeFeature(X(:,2),Y,S,[],featureName2);
+analyzeFeature(X(:,3),Y,S,[],featureName3);
+
+% perfcurve
