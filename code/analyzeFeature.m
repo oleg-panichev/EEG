@@ -48,13 +48,13 @@ function analyzeFeature(x,y,s,th,featureName)
   nOfIiTrain=round(nOfIi*0.7);
   nOfIiTest=nOfIi-nOfIiTrain;
   
-  startIdx=round(nOfPi/2-nOfPi*0.3);
-  stopIdx=round(nOfPi/2+nOfPi*0.3);
+  startIdx=round(nOfPi/2-nOfPi*0.35);
+  stopIdx=round(nOfPi/2+nOfPi*0.4);
   sortedPi=sort(xBuf);
   meanPi=mean(xBuf);
   varPi=var(xBuf);
   thStep=4*varPi/100;
-  th=(sortedPi(startIdx)):((sortedPi(stopIdx)-sortedPi(startIdx))/100):(sortedPi(stopIdx));
+  th=(sortedPi(startIdx)):((sortedPi(stopIdx)-sortedPi(startIdx))/200):(sortedPi(stopIdx));
   nOfIterations=200;
   accuracy=zeros(numel(th),nOfIterations);
   precision=zeros(numel(th),nOfIterations);
@@ -209,5 +209,5 @@ function analyzeFeature(x,y,s,th,featureName)
   disp(['Accuracy: ',num2str(mean(accuracy_Test))]);
   disp(['Precision: ',num2str(mean(precision_Test))]);
   disp(['Recall: ',num2str(mean(recall_Test))]);
-  disp(['F1 score: ',num2str(mean(F1_Test))]);
+  disp(['F1 score: ',num2str(mean(F1_Test(~isnan(F1_Test))))]);
 end

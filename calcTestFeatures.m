@@ -6,8 +6,8 @@ prepareWorkspace();
 run('processingProperties.m');
 
 % Prepare report dir
-if (~exist(reportwpath,'dir'))
-  mkdir(reportwpath);
+if (~exist(reportPath,'dir'))
+  mkdir(reportPath);
 end
 
 % Load list of patients
@@ -20,11 +20,11 @@ I=[]; % Total patient index
 sNamesBuf=[];
 
 % Data and features research
-for patIdx=1:patientsIdxBuf
+for patIdx=1:1%numel(patBuf)
   disp(['Processing: ',patBuf{patIdx}]);
   % Prepare report dir for patient
-  if (~exist([reportwpath,patBuf{patIdx}],'dir'))
-    mkdir([reportwpath,patBuf{patIdx}]);
+  if (~exist([reportPath,patBuf{patIdx}],'dir'))
+    mkdir([reportPath,patBuf{patIdx}]);
   end 
   % Load parameters of all patient's signals
   items=dir([wpath,'/',patBuf{patIdx},'/test/']);
@@ -40,7 +40,7 @@ for patIdx=1:patientsIdxBuf
   
   %Processing preictal data
   disp([testBuf{1},'...']);
-  s=load([wpath,'/',patBuf{patIdx},'/pi/',testBuf{1}]);
+  s=load([wpath,'/',patBuf{patIdx},'/test/',testBuf{1}]);
   names = fieldnames(s);
   s=eval(['s.',names{1}]);
   [features,yLabels]=prepareFeatures(s);
@@ -59,6 +59,20 @@ for patIdx=1:patientsIdxBuf
   % Store calculated data in total buffers
   X=[X;featuresBuf'];
   sNamesBuf=[sNamesBuf,testBuf];
+  
+  Z=featuresBuf';
+  x=Z(:,1);
+  featureName='Euc Distance mean';
+  save([reportPath,'/',patBuf{patIdx},'/',featureName,'.mat'],'x');
+  x=Z(:,2);
+  featureName='Euc Distance variance';
+  save([reportPath,'/',patBuf{patIdx},'/',featureName,'.mat'],'x');
+  x=Z(:,3);
+  featureName='Squared Euc Distance variance';
+  save([reportPath,'/',patBuf{patIdx},'/',featureName,'.mat'],'x');
+  save([reportPath,'/',patBuf{patIdx},'/','sNamesBuf.mat'],'testBuf');
+  i=ones(testNum,1)*patIdx;
+  save([reportPath,'/',patBuf{patIdx},'/','i','.mat'],'i');
 end
 
 
@@ -71,4 +85,5 @@ save([testPath,featureName,'.mat'],'x');
 x=X(:,3);
 featureName='Squared Euc Distance variance';
 save([testPath,featureName,'.mat'],'x');
+save([testPath,'i','.mat'],'I');
 save([testPath,'sNamesBuf.mat'],'sNamesBuf');
