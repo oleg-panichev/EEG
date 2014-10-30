@@ -21,7 +21,7 @@ S=[]; % Total sequence vector
 I=[]; % Total patient index
 
 % Data and features research
-for patIdx=3:numel(patBuf)
+for patIdx=1:1%numel(patBuf)
 %   disp(['Processing: ',patBuf{patIdx}]);
   % Prepare report dir for patient
   if (~exist([reportPath,patBuf{patIdx}],'dir'))
@@ -121,45 +121,46 @@ for patIdx=3:numel(patBuf)
   S=[S;sequence];
   I=[I;ones(nOfObservations,1)*patIdx];
   
-  if (~exist([reportPath,'/',patBuf{patIdx},'/train/'],'dir'))
-    mkdir([reportPath,'/',patBuf{patIdx},'/train/']);
-  end
-  Z=featuresBuf';
-  x=Z(:,1);
-  featureName='Euc Distance mean';
-  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-  x=Z(:,2);
-  featureName='Euc Distance variance';
-  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-  x=Z(:,3);
-  featureName='Squared Euc Distance variance'; 
-  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-  i=ones(nOfObservations,1)*patIdx;
-  save([reportPath,'/',patBuf{patIdx},'/train/','i','.mat'],'i');
-  y=[ones(piNum,1);zeros(iiNum,1)];
-  save([reportPath,'/',patBuf{patIdx},'/train/','y','.mat'],'y');
-  save([reportPath,'/',patBuf{patIdx},'/train/','s','.mat'],'sequence');
+%   if (~exist([reportPath,'/',patBuf{patIdx},'/train/'],'dir'))
+%     mkdir([reportPath,'/',patBuf{patIdx},'/train/']);
+%   end
+%   Z=featuresBuf';
+%   x=Z(:,1);
+%   featureName='Euc Distance mean';
+%   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
+%   x=Z(:,2);
+%   featureName='Euc Distance variance';
+%   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
+%   x=Z(:,3);
+%   featureName='Squared Euc Distance variance'; 
+%   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
+%   i=ones(nOfObservations,1)*patIdx;
+%   save([reportPath,'/',patBuf{patIdx},'/train/','i','.mat'],'i');
+%   y=[ones(piNum,1);zeros(iiNum,1)];
+%   save([reportPath,'/',patBuf{patIdx},'/train/','y','.mat'],'y');
+%   save([reportPath,'/',patBuf{patIdx},'/train/','s','.mat'],'sequence');
 end
 
-% Feature analysis
-if (~exist(trainPath,'dir'))
-  mkdir(trainPath);
-end
-save([trainPath,'y','.mat'],'Y');
-save([trainPath,'s','.mat'],'S');
-save([trainPath,'i','.mat'],'I');
-x=X(:,1);
-featureName1='Euc Distance mean';
-save([trainPath,featureName1,'.mat'],'x');
-x=X(:,2);
-featureName2='Euc Distance variance';
-save([trainPath,featureName2,'.mat'],'x');
-x=X(:,3);
-featureName3='Squared Euc Distance variance';
-save([trainPath,featureName3,'.mat'],'x');
-
+% Features analysis
 analyzeFeature(X(:,1),Y,S,[],featureName1);
 analyzeFeature(X(:,2),Y,S,[],featureName2);
 analyzeFeature(X(:,3),Y,S,[],featureName3);
+
+% % Features saving
+% if (~exist(trainPath,'dir'))
+%   mkdir(trainPath);
+% end
+% save([trainPath,'y','.mat'],'Y');
+% save([trainPath,'s','.mat'],'S');
+% save([trainPath,'i','.mat'],'I');
+% x=X(:,1);
+% featureName1='Euc Distance mean';
+% save([trainPath,featureName1,'.mat'],'x');
+% x=X(:,2);
+% featureName2='Euc Distance variance';
+% save([trainPath,featureName2,'.mat'],'x');
+% x=X(:,3);
+% featureName3='Squared Euc Distance variance';
+% save([trainPath,featureName3,'.mat'],'x');
 
 % perfcurve

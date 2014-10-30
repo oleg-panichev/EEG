@@ -1,8 +1,14 @@
-% Function for one feature productivity analysis
+% Function for estimation of classification results 
+% based on one feature. 
+%
 % Inputs:
 % x - feature vector
 % y - output vector
-function analyzeFeature(x,y,s,th,featureName)
+% s - sequence vectore
+% th - threshold values to test
+% featureName - name of the feature to analyse
+%
+function [optTh,avTh,ACC,PPV,TPR,SPC,F1]=analyzeFeature(x,y,s,th,featureName)
   disp(['Analyzing feature ',featureName,'...']);
   m=size(x,2);
   N=numel(y);
@@ -37,6 +43,21 @@ function analyzeFeature(x,y,s,th,featureName)
   linkaxes(hx,'y');
   suptitle(featureName);
   
+  figure
+  clear hx;
+  hx(1)=subplot(2,1,1);
+  [nelements,centers]=hist(x(y==1),20);
+  bar(centers,log(nelements+1));
+  title('Preictal');
+  grid on;
+  hx(2)=subplot(2,1,2);
+  [nelements,centers]=hist(x(y==0),20);
+  bar(centers,log(nelements+1));
+  title('Interictal');
+  grid on;
+  linkaxes(hx,'x');
+  suptitle(featureName);
+  
   % 
   idxBuf=1:N;
   piIdx=idxBuf(y==1);
@@ -54,11 +75,12 @@ function analyzeFeature(x,y,s,th,featureName)
   meanPi=mean(xBuf);
   varPi=var(xBuf);
   thStep=4*varPi/100;
-  th=(sortedPi(startIdx)):((sortedPi(stopIdx)-sortedPi(startIdx))/200):(sortedPi(stopIdx));
+  th=(sortedPi(startIdx)):((sortedPi(stopIdx)-sortedPi(startIdx))/500):(sortedPi(stopIdx));
   nOfIterations=200;
-  accuracy=zeros(numel(th),nOfIterations);
-  precision=zeros(numel(th),nOfIterations);
-  recall=zeros(numel(th),nOfIterations);
+  ACC=zeros(numel(th),nOfIterations);
+  PPV=zeros(numel(th),nOfIterations);
+  TPR=zeros(numel(th),nOfIterations);
+  SPC=zeros(numel(th),nOfIterations);
   F1=zeros(numel(th),nOfIterations);
   TP=zeros(numel(th),nOfIterations);
   FP=zeros(numel(th),nOfIterations);
@@ -68,11 +90,13 @@ function analyzeFeature(x,y,s,th,featureName)
   FP_Test=zeros(nOfIterations,1);
   FN_Test=zeros(nOfIterations,1);
   TN_Test=zeros(nOfIterations,1);
-  accuracy_Test=zeros(nOfIterations,1);
-  precision_Test=zeros(nOfIterations,1);
-  recall_Test=zeros(nOfIterations,1);
+  ACC_Test=zeros(nOfIterations,1);
+  PPV_Test=zeros(nOfIterations,1);
+  TPR_Test=zeros(nOfIterations,1);
+  SPC_Test=zeros(nOfIterations,1);
   F1_Test=zeros(nOfIterations,1);
   NTrain=nOfIiTrain+nOfPiTrain;
+  thBuf=zeros(nOfIterations,1);
   
   for iter=1:nOfIterations
     piPermIdx=randperm(numel(piIdx));
@@ -101,10 +125,11 @@ function analyzeFeature(x,y,s,th,featureName)
           TN(idx,iter)=TN(idx,iter)+1;
         end
       end
-      accuracy(idx,iter)=(TP(idx,iter)+TN(idx,iter))/NTrain;
-      precision(idx,iter)=TP(idx,iter)/(TP(idx,iter)+FP(idx,iter));
-      recall(idx,iter)=TP(idx,iter)/(TP(idx,iter)+FN(idx,iter));
-      F1(idx,iter)=2*precision(idx,iter)*recall(idx,iter)/(precision(idx,iter)+recall(idx,iter));
+      ACC(idx,iter)=(TP(idx,iter)+TN(idx,iter))/NTrain;
+      PPV(idx,iter)=TP(idx,iter)/(TP(idx,iter)+FP(idx,iter));
+      TPR(idx,iter)=TP(idx,iter)/(TP(idx,iter)+FN(idx,iter));
+      SPC(idx,iter)=TN(idx,iter)/(FP(idx,iter)+TN(idx,iter));
+      F1(idx,iter)=2*PPV(idx,iter)*TPR(idx,iter)/(PPV(idx,iter)+TPR(idx,iter));
       idx=idx+1;
     end
     
@@ -123,10 +148,12 @@ function analyzeFeature(x,y,s,th,featureName)
         TN_Test(iter)=TN_Test(iter)+1;
       end
     end
-    accuracy_Test(iter)=(TP_Test(iter)+TN_Test(iter))/NTest;
-    precision_Test(iter)=TP_Test(iter)/(TP_Test(iter)+FP_Test(iter));
-    recall_Test(iter)=TP_Test(iter)/(TP_Test(iter)+FN_Test(iter));
-    F1_Test(iter)=2*precision_Test(iter)*recall_Test(iter)/(precision_Test(iter)+recall_Test(iter)+eps);
+    ACC_Test(iter)=(TP_Test(iter)+TN_Test(iter))/NTest;
+    PPV_Test(iter)=TP_Test(iter)/(TP_Test(iter)+FP_Test(iter));
+    TPR_Test(iter)=TP_Test(iter)/(TP_Test(iter)+FN_Test(iter));
+    SPC_Test(iter)=TN_Test(iter)/(FP_Test(iter)+TN_Test(iter));
+    F1_Test(iter)=2*PPV_Test(iter)*TPR_Test(iter)/(PPV_Test(iter)+TPR_Test(iter)+eps);
+    thBuf(iter)=th(optIdx);
   end
     
   f=figure;
@@ -134,21 +161,21 @@ function analyzeFeature(x,y,s,th,featureName)
   set(f,'Position',[0 100 1130 570]);
   set(f,'DefaultAxesLooseInset',[0,0.1,0,0]);
   subplot(2,3,1);
-  plot(th,max(accuracy,[],2),'g'); hold on;
-  plot(th,mean(accuracy,2),'Linewidth',2); hold on;
-  plot(th,min(accuracy,[],2),'r');
+  plot(th,max(ACC,[],2),'g'); hold on;
+  plot(th,mean(ACC,2),'Linewidth',2); hold on;
+  plot(th,min(ACC,[],2),'r');
   ylabel('Accuracy'); xlabel('threshold'); xlim([th(1) th(end)]); grid on;
   legend('Max','Mean','Min');
   subplot(2,3,2);
-  plot(th,max(precision,[],2),'g'); hold on;
-  plot(th,mean(precision,2),'Linewidth',2); hold on; 
-  plot(th,min(precision,[],2),'r');
+  plot(th,max(PPV,[],2),'g'); hold on;
+  plot(th,mean(PPV,2),'Linewidth',2); hold on; 
+  plot(th,min(PPV,[],2),'r');
   ylabel('Precision'); xlabel('threshold'); xlim([th(1) th(end)]); grid on;
   legend('Max','Mean','Min');
   subplot(2,3,3);
-  plot(th,max(recall,[],2),'g'); hold on;
-  plot(th,mean(recall,2),'Linewidth',2); hold on;  
-  plot(th,min(recall,[],2),'r');
+  plot(th,max(TPR,[],2),'g'); hold on;
+  plot(th,mean(TPR,2),'Linewidth',2); hold on;  
+  plot(th,min(TPR,[],2),'r');
   ylabel('Recall'); xlabel('threshold'); xlim([th(1) th(end)]); grid on;
   legend('Max','Mean','Min');
   subplot(2,3,4);
@@ -161,10 +188,10 @@ function analyzeFeature(x,y,s,th,featureName)
   ylabel('F1 score'); xlabel('threshold'); xlim([th(1) th(end)]); grid on;
   legend('Max','Mean','Min');
   subplot(2,3,5);
-  plot(max(recall,[],2),max(precision,[],2),'g'); hold on;
-  plot(mean(recall,2),mean(precision,2),'Linewidth',2); hold on;
-  plot(min(recall,[],2),min(precision,[],2),'r'); 
-  ylabel('Precision'); xlabel('Recall'); xlim([min(min(recall,[],2)) max(max(recall,[],2))]); grid on;
+  plot(max(TPR,[],2),max(PPV,[],2),'g'); hold on;
+  plot(mean(TPR,2),mean(PPV,2),'Linewidth',2); hold on;
+  plot(min(TPR,[],2),min(PPV,[],2),'r'); 
+  ylabel('Precision'); xlabel('Recall'); xlim([min(min(TPR,[],2)) max(max(TPR,[],2))]); grid on;
   legend('Max','Mean','Min');
   subplot(2,3,6);
   barVal=[min(mean(TP,2)),mean(mean(TP,2)),max(mean(TP,2));
@@ -178,7 +205,6 @@ function analyzeFeature(x,y,s,th,featureName)
   grid on;
   suptitle(['Train results, ',featureName]);
   
-  disp(['Optimal threshold (train): ',num2str(th(idx))]);
   f=figure;
   set(f,'PaperPositionMode','auto');
   set(f,'Position',[0 100 600 300]);
@@ -205,9 +231,22 @@ function analyzeFeature(x,y,s,th,featureName)
   ylabel('%');
   title('Test');
   grid on;
+ 
+  % Return
+  optTh=th(idx);
+  avTh=mean(thBuf);
+  ACC=mean(ACC_Test)*100;
+  PPV=mean(PPV_Test(~isnan(PPV_Test)))*100;
+  TPR=mean(TPR_Test(~isnan(TPR_Test)))*100;
+  SPC=mean(SPC_Test(~isnan(SPC_Test)))*100;
+  F1=mean(F1_Test(~isnan(F1_Test)))*100;
   
-  disp(['Accuracy: ',num2str(mean(accuracy_Test))]);
-  disp(['Precision: ',num2str(mean(precision_Test))]);
-  disp(['Recall: ',num2str(mean(recall_Test))]);
-  disp(['F1 score: ',num2str(mean(F1_Test(~isnan(F1_Test))))]);
+  % Disp
+  disp(['Optimal th (max(mean(F1 Score))): ',num2str(optTh)]);
+  disp(['Av. th from all iterations: ',num2str(avTh)]);
+  disp(['Accuracy: ',num2str(ACC),' %']);
+  disp(['Precision: ',num2str(PPV),' %']);
+  disp(['Recall: ',num2str(TPR),' %']);
+  disp(['Specificity: ',num2str(SPC),' %']);
+  disp(['F1 score: ',num2str(F1),' %']);
 end

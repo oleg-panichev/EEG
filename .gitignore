@@ -4,4 +4,6 @@
 /test/*
 */*.asv
 *.asv
+*.csv
 *.mat
+*.xlsx
