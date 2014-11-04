@@ -20,7 +20,7 @@ I=[]; % Total patient index
 sNamesBuf=[];
 
 % Data and features research
-for patIdx=1:1%numel(patBuf)
+for patIdx=1:numel(patBuf)
   disp(['Processing: ',patBuf{patIdx}]);
   % Prepare report dir for patient
   if (~exist([reportPath,patBuf{patIdx}],'dir'))
@@ -62,14 +62,18 @@ for patIdx=1:1%numel(patBuf)
   
   Z=featuresBuf';
   x=Z(:,1);
-  featureName='Euc Distance mean';
+  featureName='iAmpl mean';
   save([reportPath,'/',patBuf{patIdx},'/',featureName,'.mat'],'x');
   x=Z(:,2);
-  featureName='Euc Distance variance';
+  featureName='iAmpl variance';
   save([reportPath,'/',patBuf{patIdx},'/',featureName,'.mat'],'x');
   x=Z(:,3);
-  featureName='Squared Euc Distance variance';
+  featureName='iPhase mean';
   save([reportPath,'/',patBuf{patIdx},'/',featureName,'.mat'],'x');
+  x=Z(:,4);
+  featureName='iPhase variance';
+  save([reportPath,'/',patBuf{patIdx},'/',featureName,'.mat'],'x');
+
   save([reportPath,'/',patBuf{patIdx},'/','sNamesBuf.mat'],'testBuf');
   i=ones(testNum,1)*patIdx;
   save([reportPath,'/',patBuf{patIdx},'/','i','.mat'],'i');
@@ -77,13 +81,16 @@ end
 
 
 x=X(:,1);
-featureName='Euc Distance mean';
+featureName='iAmpl mean';
 save([testPath,featureName,'.mat'],'x');
 x=X(:,2);
-featureName='Euc Distance variance';
+featureName='iAmpl variance';
 save([testPath,featureName,'.mat'],'x');
 x=X(:,3);
-featureName='Squared Euc Distance variance';
+featureName='iPhase mean';
+save([testPath,featureName,'.mat'],'x');
+x=X(:,4);
+featureName='iPhase variance';
 save([testPath,featureName,'.mat'],'x');
 save([testPath,'i','.mat'],'I');
 save([testPath,'sNamesBuf.mat'],'sNamesBuf');

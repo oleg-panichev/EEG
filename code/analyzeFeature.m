@@ -8,7 +8,7 @@
 % th - threshold values to test
 % featureName - name of the feature to analyse
 %
-function [optTh,avTh,ACC,PPV,TPR,SPC,F1]=analyzeFeature(x,y,s,th,featureName)
+function [optTh,avTh,ACC,PPV,TPR,SPC,F1,AUC]=analyzeFeature(x,y,s,th,featureName)
   disp(['Analyzing feature ',featureName,'...']);
   m=size(x,2);
   N=numel(y);
@@ -82,6 +82,7 @@ function [optTh,avTh,ACC,PPV,TPR,SPC,F1]=analyzeFeature(x,y,s,th,featureName)
   TPR=zeros(numel(th),nOfIterations);
   SPC=zeros(numel(th),nOfIterations);
   F1=zeros(numel(th),nOfIterations);
+  AUC=zeros(numel(th),nOfIterations);
   TP=zeros(numel(th),nOfIterations);
   FP=zeros(numel(th),nOfIterations);
   FN=zeros(numel(th),nOfIterations);
@@ -95,6 +96,7 @@ function [optTh,avTh,ACC,PPV,TPR,SPC,F1]=analyzeFeature(x,y,s,th,featureName)
   TPR_Test=zeros(nOfIterations,1);
   SPC_Test=zeros(nOfIterations,1);
   F1_Test=zeros(nOfIterations,1);
+  AUC_Test=zeros(nOfIterations,1);
   NTrain=nOfIiTrain+nOfPiTrain;
   thBuf=zeros(nOfIterations,1);
   
@@ -130,6 +132,7 @@ function [optTh,avTh,ACC,PPV,TPR,SPC,F1]=analyzeFeature(x,y,s,th,featureName)
       TPR(idx,iter)=TP(idx,iter)/(TP(idx,iter)+FN(idx,iter));
       SPC(idx,iter)=TN(idx,iter)/(FP(idx,iter)+TN(idx,iter));
       F1(idx,iter)=2*PPV(idx,iter)*TPR(idx,iter)/(PPV(idx,iter)+TPR(idx,iter));
+%       [~,~,~,AUC(idx,iter)]=perfcurve(yTrain,res,1);
       idx=idx+1;
     end
     
@@ -153,6 +156,7 @@ function [optTh,avTh,ACC,PPV,TPR,SPC,F1]=analyzeFeature(x,y,s,th,featureName)
     TPR_Test(iter)=TP_Test(iter)/(TP_Test(iter)+FN_Test(iter));
     SPC_Test(iter)=TN_Test(iter)/(FP_Test(iter)+TN_Test(iter));
     F1_Test(iter)=2*PPV_Test(iter)*TPR_Test(iter)/(PPV_Test(iter)+TPR_Test(iter)+eps);
+%     [~,~,~,AUC_Test(iter)]=perfcurve(yTest,res,1);
     thBuf(iter)=th(optIdx);
   end
     
@@ -188,22 +192,17 @@ function [optTh,avTh,ACC,PPV,TPR,SPC,F1]=analyzeFeature(x,y,s,th,featureName)
   ylabel('F1 score'); xlabel('threshold'); xlim([th(1) th(end)]); grid on;
   legend('Max','Mean','Min');
   subplot(2,3,5);
+  plot(th,max(AUC,[],2),'g'); hold on;
+  plot(th,mean(AUC,2),'Linewidth',2); hold on; 
+  plot(th,min(AUC,[],2),'r'); hold on;
+  ylabel('AUC'); xlabel('threshold'); xlim([th(1) th(end)]); grid on;
+  legend('Max','Mean','Min');
+  subplot(2,3,6);
   plot(max(TPR,[],2),max(PPV,[],2),'g'); hold on;
   plot(mean(TPR,2),mean(PPV,2),'Linewidth',2); hold on;
   plot(min(TPR,[],2),min(PPV,[],2),'r'); 
   ylabel('Precision'); xlabel('Recall'); xlim([min(min(TPR,[],2)) max(max(TPR,[],2))]); grid on;
   legend('Max','Mean','Min');
-  subplot(2,3,6);
-  barVal=[min(mean(TP,2)),mean(mean(TP,2)),max(mean(TP,2));
-    min(mean(TN,2)),mean(mean(TN,2)),max(mean(TN,2));
-    min(mean(FP,2)),mean(mean(FP,2)),max(mean(FP,2));
-    min(mean(FN,2)),mean(mean(FN,2)),max(mean(FN,2));].*100/NTrain;
-  bar(barVal);
-  set(gca,'XTickLabel',{'TP','TN','FP','FN'}); xlim([0.5 4.5]); 
-  colormap('cool');
-  ylabel('%');
-  grid on;
-  suptitle(['Train results, ',featureName]);
   
   f=figure;
   set(f,'PaperPositionMode','auto');
@@ -240,6 +239,7 @@ function [optTh,avTh,ACC,PPV,TPR,SPC,F1]=analyzeFeature(x,y,s,th,featureName)
   TPR=mean(TPR_Test(~isnan(TPR_Test)))*100;
   SPC=mean(SPC_Test(~isnan(SPC_Test)))*100;
   F1=mean(F1_Test(~isnan(F1_Test)))*100;
+  AUC=mean(AUC_Test);
   
   % Disp
   disp(['Optimal th (max(mean(F1 Score))): ',num2str(optTh)]);
@@ -249,4 +249,7 @@ function [optTh,avTh,ACC,PPV,TPR,SPC,F1]=analyzeFeature(x,y,s,th,featureName)
   disp(['Recall: ',num2str(TPR),' %']);
   disp(['Specificity: ',num2str(SPC),' %']);
   disp(['F1 score: ',num2str(F1),' %']);
+  disp(['AUC: ',num2str(AUC)]);
+  
+%   [X,Y,T,AUC] = perfcurve(labels,scores,posclass);
 end
