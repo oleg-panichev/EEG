@@ -35,61 +35,64 @@ featuresList=[featuresList,fName];
 % XTest=[XTest,s.x];
 % featuresList=[featuresList,fName];
 
-fName='ChSq Distance mean';
-s=load([trainPath,fName,'.mat']);
-XTrain=[XTrain,s.x];
-s=load([testPath,fName,'.mat']);
-XTest=[XTest,s.x];
-featuresList=[featuresList,fName];
+% fName='ChSq Distance mean';
+% s=load([trainPath,fName,'.mat']);
+% XTrain=[XTrain,s.x];
+% s=load([testPath,fName,'.mat']);
+% XTest=[XTest,s.x];
+% featuresList=[featuresList,fName];
+% 
+% fName='ChSq Distance variance';
+% s=load([trainPath,fName,'.mat']);
+% XTrain=[XTrain,s.x];
+% s=load([testPath,fName,'.mat']);
+% XTest=[XTest,s.x];
+% featuresList=[featuresList,fName];
 
-fName='ChSq Distance variance';
-s=load([trainPath,fName,'.mat']);
-XTrain=[XTrain,s.x];
-s=load([testPath,fName,'.mat']);
-XTest=[XTest,s.x];
-featuresList=[featuresList,fName];
+% fName='MI mean';
+% s=load([trainPath,fName,'.mat']);
+% XTrain=[XTrain,s.x];
+% s=load([testPath,fName,'.mat']);
+% XTest=[XTest,s.x];
+% featuresList=[featuresList,fName];
+% 
+% fName='MI variance';
+% s=load([trainPath,fName,'.mat']);
+% XTrain=[XTrain,s.x];
+% s=load([testPath,fName,'.mat']);
+% XTest=[XTest,s.x];
+% featuresList=[featuresList,fName];
 
-fName='MI mean';
-s=load([trainPath,fName,'.mat']);
-XTrain=[XTrain,s.x];
-s=load([testPath,fName,'.mat']);
-XTest=[XTest,s.x];
-featuresList=[featuresList,fName];
+% fName='iAmpl mean';
+% s=load([trainPath,fName,'.mat']);
+% XTrain=[XTrain,s.x];
+% s=load([testPath,fName,'.mat']);
+% XTest=[XTest,s.x];
+% featuresList=[featuresList,fName];
+% 
+% fName='iAmpl variance';
+% s=load([trainPath,fName,'.mat']);
+% XTrain=[XTrain,s.x];
+% s=load([testPath,fName,'.mat']);
+% XTest=[XTest,s.x];
+% featuresList=[featuresList,fName];
+% 
+% fName='iPhase mean';
+% s=load([trainPath,fName,'.mat']);
+% XTrain=[XTrain,s.x];
+% s=load([testPath,fName,'.mat']);
+% XTest=[XTest,s.x];
+% featuresList=[featuresList,fName];
+% 
+% fName='iPhase variance';
+% s=load([trainPath,fName,'.mat']);
+% XTrain=[XTrain,s.x];
+% s=load([testPath,fName,'.mat']);
+% XTest=[XTest,s.x];
+% featuresList=[featuresList,fName];
 
-fName='MI variance';
-s=load([trainPath,fName,'.mat']);
-XTrain=[XTrain,s.x];
-s=load([testPath,fName,'.mat']);
-XTest=[XTest,s.x];
-featuresList=[featuresList,fName];
-
-fName='iAmpl mean';
-s=load([trainPath,fName,'.mat']);
-XTrain=[XTrain,s.x];
-s=load([testPath,fName,'.mat']);
-XTest=[XTest,s.x];
-featuresList=[featuresList,fName];
-
-fName='iAmpl variance';
-s=load([trainPath,fName,'.mat']);
-XTrain=[XTrain,s.x];
-s=load([testPath,fName,'.mat']);
-XTest=[XTest,s.x];
-featuresList=[featuresList,fName];
-
-fName='iPhase mean';
-s=load([trainPath,fName,'.mat']);
-XTrain=[XTrain,s.x];
-s=load([testPath,fName,'.mat']);
-XTest=[XTest,s.x];
-featuresList=[featuresList,fName];
-
-fName='iPhase variance';
-s=load([trainPath,fName,'.mat']);
-XTrain=[XTrain,s.x];
-s=load([testPath,fName,'.mat']);
-XTest=[XTest,s.x];
-featuresList=[featuresList,fName];
+% [XTrain,~,~]=featureNormalize(XTrain);
+% [XTest,~,~]=featureNormalize(XTest);
 
 s=load([trainPath,'i.mat']);
 ITrain=s.I;
@@ -150,8 +153,19 @@ for patIdx=1:numel(patBuf)
     seqPi=seq(idxPi);
     seqIi=seq(idxIi);
     randIdx=randperm(size(xTrainIi,1));
+    % Choose the most different features set for II
+    d=zeros(size(xTrainIi,1),1);
+    for m=1:size(xTrainIi,1)
+      for n=1:size(xTrainPi,1)
+        d(m)=d(m)+euDistance(xTrainIi(m,:),xTrainPi(n,:));
+      end
+    end
+    [D,IDX]=sort(d);
+    randIdx=IDX;
+    
     xTrainIiWght=xTrainIi(randIdx,:);
     xTrainIiWght=xTrainIiWght(1:nOfPi,:);
+    
     seqIiWght=seqIi(randIdx);
     seqIiWght=seqIiWght(1:nOfPi);
     yIiWght=yIi(randIdx);

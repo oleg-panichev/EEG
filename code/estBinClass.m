@@ -1,4 +1,6 @@
-function [TP,TN,FP,FN,PPV,TPR,F1]=estBinClass(Y,result)
+% Function for estimation results of classification.
+%
+function [TP,TN,FP,FN,ACC,PPV,TPR,SPC,FPR,F1,SS]=estBinClass(Y,result)
   TP=0;
   TN=0;
   FP=0;
@@ -14,7 +16,11 @@ function [TP,TN,FP,FN,PPV,TPR,F1]=estBinClass(Y,result)
       TN=TN+1;
     end
   end
+  ACC=(TP+TN)/numel(Y);
   PPV=TP/(TP+FP);
   TPR=TP/(TP+FN);
+  SPC=TN/(FP+TN);
+  FPR=FP/(FP+TN);
   F1=2*PPV*TPR/(PPV+TPR);
+  SS=2*SPC*TPR/(SPC+TPR);
 end

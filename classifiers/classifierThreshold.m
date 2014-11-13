@@ -8,8 +8,11 @@
 % th - threshold values to test
 % featureName - name of the feature to analyse
 %
-function [optTh,avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC]=classifierThreshold(x,y,s,T,featureName)
-  disp(['Analyzing feature ',featureName,'...']);
+function [optTh,avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
+  classifierThreshold(x,y,xUnknownTest,s,featureName)
+
+  disp(['Threshold classifier: ',featureName,'...']);
+  run('processingProperties.m');
   m=size(x,2);
   N=numel(y);
   
@@ -62,28 +65,27 @@ function [optTh,avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC]=classifierThreshold(x,y,s,T,
   idxBuf=1:N;
   piIdx=idxBuf(y==1);
   nOfPi=numel(piIdx);
-  nOfPiTrain=round(nOfPi*0.7);
+  nOfPiTrain=round(nOfPi*trainNumCoef);
   nOfPiTest=nOfPi-nOfPiTrain;
   iiIdx=idxBuf(y==0);
   nOfIi=numel(iiIdx);
-  nOfIiTrain=round(nOfIi*0.7);
+  nOfIiTrain=round(nOfIi*trainNumCoef);
   nOfIiTest=nOfIi-nOfIiTrain;
 
-  [th,xSign]=getThresholds(x,y,500);
   
-  nOfIterations=200;
-  ACC=zeros(numel(th),nOfIterations);
-  PPV=zeros(numel(th),nOfIterations);
-  TPR=zeros(numel(th),nOfIterations);
-  SPC=zeros(numel(th),nOfIterations);
-  FPR=zeros(numel(th),nOfIterations);
-  F1=zeros(numel(th),nOfIterations);
-  SS=zeros(numel(th),nOfIterations);
-  AUC=zeros(numel(th),nOfIterations);
-  TP=zeros(numel(th),nOfIterations);
-  FP=zeros(numel(th),nOfIterations);
-  FN=zeros(numel(th),nOfIterations);
-  TN=zeros(numel(th),nOfIterations);
+
+  ACC=zeros(nOfThresholds,nOfIterations);
+  PPV=zeros(nOfThresholds,nOfIterations);
+  TPR=zeros(nOfThresholds,nOfIterations);
+  SPC=zeros(nOfThresholds,nOfIterations);
+  FPR=zeros(nOfThresholds,nOfIterations);
+  F1=zeros(nOfThresholds,nOfIterations);
+  SS=zeros(nOfThresholds,nOfIterations);
+  AUC=zeros(nOfThresholds,nOfIterations);
+  TP=zeros(nOfThresholds,nOfIterations);
+  FP=zeros(nOfThresholds,nOfIterations);
+  FN=zeros(nOfThresholds,nOfIterations);
+  TN=zeros(nOfThresholds,nOfIterations);
   TP_Test=zeros(nOfIterations,1);
   FP_Test=zeros(nOfIterations,1);
   FN_Test=zeros(nOfIterations,1);
@@ -111,13 +113,19 @@ function [optTh,avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC]=classifierThreshold(x,y,s,T,
     yTrain=[y(piTrainIdx);y(iiTrainIdx)];
     xTest=[x(piTestIdx);x(iiTestIdx)];
     yTest=[y(piTestIdx);y(iiTestIdx)]; 
-
+    
+    [th]=getThresholds(xTrain,nOfThresholds);
+    [xSign]=getSign(xTrain,yTrain);
     [TP(:,iter),TN(:,iter),FP(:,iter),FN(:,iter),ACC(:,iter),PPV(:,iter),...
       TPR(:,iter),SPC(:,iter),FPR(:,iter),F1(:,iter),SS(:,iter),~]=perfCurvesTh(yTrain,xTrain,th,xSign);
     
     % Estimation on the test data    
     [~,optIdx]=max(SS(:,iter));
-    res=xTest<th(optIdx);
+    if (xSign>0)
+      res=xTest>=th(optIdx);
+    elseif (xSign<0)
+      res=xTest<=th(optIdx);
+    end
 
     [~,~,~,~,~,~,~,~,~,~,~,AUC_Test(iter)]=perfCurvesTh(yTest,xTest,th,xSign);
     [TP_Test(iter),TN_Test(iter),FP_Test(iter),FN_Test(iter),ACC_Test(iter),...
@@ -127,6 +135,7 @@ function [optTh,avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC]=classifierThreshold(x,y,s,T,
     thBuf(iter)=th(optIdx);
   end
     
+  meanROC=[mean(FPR,2),mean(TPR,2)];
 %   f=figure;
 %   set(f,'PaperPositionMode','auto');
 %   set(f,'Position',[0 100 1130 570]);
@@ -209,6 +218,12 @@ function [optTh,avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC]=classifierThreshold(x,y,s,T,
   F1=mean(F1_Test(~isnan(F1_Test)));
   SS=mean(SS_Test(~isnan(SS_Test)));
   AUC=mean(AUC_Test);
+
+  if (xSign>0)
+    rslt=xUnknownTest>=avTh;
+  elseif (xSign<0)
+    rslt=xUnknownTest<=avTh;
+  end
   
   % Disp
   disp(['Optimal th (max(mean(F1 Score))): ',num2str(optTh)]);
