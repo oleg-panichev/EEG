@@ -1,7 +1,7 @@
 function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
-  classifierNaiveBayes(x,y,xUnknownTest)
+  classifierSVM(x,y,xUnknownTest)
 
-  disp(['Naive Bayes classifier: ']);
+  disp(['SVM: ']);
   run('processingProperties.m');
   m=size(x,2);
   N=numel(y);
@@ -54,25 +54,23 @@ function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
     iiTrainIdx=iiIdx(iiPermIdx(1:nOfIiTrain));
     iiTestIdx=iiIdx(iiPermIdx(nOfIiTrain+1:end));
 
-    xTrain=[x(piTrainIdx,:);x(iiTrainIdx,:)];
+    xTrain=[x(piTrainIdx);x(iiTrainIdx)];
     yTrain=[y(piTrainIdx);y(iiTrainIdx)];
-    xTest=[x(piTestIdx,:);x(iiTestIdx,:)];
+    xTest=[x(piTestIdx);x(iiTestIdx)];
     yTest=[y(piTestIdx);y(iiTestIdx)]; 
 
-    nb=fitNaiveBayes(xTrain,yTrain);
-%     p=predict(nb,xTrain);
-    p=posterior(nb,xTrain);
+    cl=fitcsvm(xTrain,yTrain);
+    [~,p]=predict(cl,xTrain);
     p=p(:,2);
     [TP(:,iter),TN(:,iter),FP(:,iter),FN(:,iter),ACC(:,iter),PPV(:,iter),...
       TPR(:,iter),SPC(:,iter),FPR(:,iter),F1(:,iter),SS(:,iter),~]=...
       perfCurvesTh(yTrain,p,T,1);
     [~,optIdx]=max(SS(:,iter));
-    p=posterior(nb,xTest);
+    [res,p]=predict(cl,xTest);
     p=p(:,2);
-    res=predict(nb,xTest);
 %     res=p>T(optIdx);
     
-    [fpr,tpr,~,AUC_Test(iter)] = perfcurve(yTest,p,1);
+    [fpr,tpr,~,AUC_Test(iter)]=perfcurve(yTest,p,1);
 
     [TP_Test(iter),TN_Test(iter),FP_Test(iter),FN_Test(iter),ACC_Test(iter),...
       PPV_Test(iter),TPR_Test(iter),SPC_Test(iter),FPR_Test(iter),...
@@ -95,8 +93,8 @@ function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
   AUC=mean(AUC_Test);
   
   if (numel(xUnknownTest)>0)
-    nb=fitNaiveBayes(x,y);
-    rslt=predict(nb,xUnknownTest);
+    cl=fitcsvm(x,y);
+    [rslt,p]=predict(cl,xUnknownTest);
 %     rslt=p>=avTh;
   else
     rslt=[];

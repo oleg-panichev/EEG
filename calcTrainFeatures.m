@@ -125,17 +125,14 @@ for patIdx=1:numel(patBuf)
     mkdir([reportPath,'/',patBuf{patIdx},'/train/']);
   end
   Z=featuresBuf';
-  x=Z(:,1);
-  featureName='iAmpl mean';
+  x=Z(:,1:intChNum);
+  featureName='MI';
   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-  x=Z(:,2);
-  featureName='iAmpl variance';
-  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-  x=Z(:,3);
-  featureName='iPhase mean'; 
-  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-  x=Z(:,4);
-  featureName='iPhase variance'; 
+  x=Z(:,intChNum+1:2*intChNum);
+%   featureName='iPhaseDiff';
+%   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
+%   x=Z(:,2*intChNum+1:end);
+  featureName='EuDistance'; 
   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
 
   i=ones(nOfObservations,1)*patIdx;
@@ -154,20 +151,20 @@ end
 if (~exist(trainPath,'dir'))
   mkdir(trainPath);
 end
-save([trainPath,'y','.mat'],'Y');
-save([trainPath,'s','.mat'],'S');
-save([trainPath,'i','.mat'],'I');
-x=X(:,1);
-featureName1='iAmpl mean';
-save([trainPath,featureName1,'.mat'],'x');
-x=X(:,2);
-featureName2='iAmpl variance';
-save([trainPath,featureName2,'.mat'],'x');
-x=X(:,3);
-featureName3='iPhase mean';
-save([trainPath,featureName3,'.mat'],'x');
-x=X(:,4);
-featureName4='iPhase variance';
-save([trainPath,featureName4,'.mat'],'x');
+% save([trainPath,'y','.mat'],'Y');
+% save([trainPath,'s','.mat'],'S');
+% save([trainPath,'i','.mat'],'I');
+% x=X(:,1);
+% featureName1='iAmpl mean';
+% save([trainPath,featureName1,'.mat'],'x');
+% x=X(:,2);
+% featureName2='iAmpl variance';
+% save([trainPath,featureName2,'.mat'],'x');
+% x=X(:,3);
+% featureName3='iPhase mean';
+% save([trainPath,featureName3,'.mat'],'x');
+% x=X(:,4);
+% featureName4='iPhase variance';
+% save([trainPath,featureName4,'.mat'],'x');
 
 % perfcurve

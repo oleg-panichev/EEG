@@ -1,7 +1,7 @@
 function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
-  classifierNaiveBayes(x,y,xUnknownTest)
+  classifierLogit(x,y,xUnknownTest)
 
-  disp(['Naive Bayes classifier: ']);
+  disp(['Logistic regression: ']);
   run('processingProperties.m');
   m=size(x,2);
   N=numel(y);
@@ -54,23 +54,26 @@ function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
     iiTrainIdx=iiIdx(iiPermIdx(1:nOfIiTrain));
     iiTestIdx=iiIdx(iiPermIdx(nOfIiTrain+1:end));
 
-    xTrain=[x(piTrainIdx,:);x(iiTrainIdx,:)];
+    xTrain=[x(piTrainIdx);x(iiTrainIdx)];
     yTrain=[y(piTrainIdx);y(iiTrainIdx)];
-    xTest=[x(piTestIdx,:);x(iiTestIdx,:)];
+    xTest=[x(piTestIdx);x(iiTestIdx)];
     yTest=[y(piTestIdx);y(iiTestIdx)]; 
 
-    nb=fitNaiveBayes(xTrain,yTrain);
-%     p=predict(nb,xTrain);
-    p=posterior(nb,xTrain);
-    p=p(:,2);
+    nb=fitglm(xTrain,yTrain,'Distribution','binomial');
+%     nb=mnrfit(xTrain,yTrain);
+    p=predict(nb,xTrain);
+%     p=posterior(nb,xTrain);
+%     p=p(:,2);
+%     p=mnrval(nb,xTrain);
     [TP(:,iter),TN(:,iter),FP(:,iter),FN(:,iter),ACC(:,iter),PPV(:,iter),...
       TPR(:,iter),SPC(:,iter),FPR(:,iter),F1(:,iter),SS(:,iter),~]=...
       perfCurvesTh(yTrain,p,T,1);
     [~,optIdx]=max(SS(:,iter));
-    p=posterior(nb,xTest);
-    p=p(:,2);
-    res=predict(nb,xTest);
-%     res=p>T(optIdx);
+%     p=mnrval(nb,xTest);
+%     p=posterior(nb,xTest);
+%     p=p(:,2);
+    p=predict(nb,xTest);
+    res=p>=T(optIdx);
     
     [fpr,tpr,~,AUC_Test(iter)] = perfcurve(yTest,p,1);
 
@@ -95,9 +98,11 @@ function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
   AUC=mean(AUC_Test);
   
   if (numel(xUnknownTest)>0)
-    nb=fitNaiveBayes(x,y);
-    rslt=predict(nb,xUnknownTest);
-%     rslt=p>=avTh;
+    nb=fitglm(x,y,'Distribution','binomial');
+    p=predict(nb,xUnknownTest);
+%     nb=mnrfit(x,y);
+%     p=mnrval(nb,xUnknownTest);
+    rslt=p>=avTh;
   else
     rslt=[];
   end
