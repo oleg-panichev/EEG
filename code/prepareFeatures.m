@@ -3,21 +3,20 @@ function [features,labels]=prepareFeatures(s)
   fs=s.sampling_frequency;
   stepSec=30; 
   tBuf = 1:round(stepSec*fs):floor(s.data_length_sec*fs-miWindowSize*fs);
-  
-  % Mutual information
   chNum=numel(s.channels);
   intChNum=sum(1:(chNum-1));
-  mi=zeros(intChNum,numel(tBuf));
-  idx=1;
-  for i=tBuf
-    [mi(:,idx),~,~]=muinfoMultiChannel(s.data,i, ...
-      round(miWindowSize*fs),s.channels,0);
-    idx=idx+1;
-  end
-  mi_avt=mean(mi,2);
-  mi_av=mean(mi_avt);
-  features=[mi];
-  
+
+%   % Mutual information
+%   mi=zeros(intChNum,numel(tBuf));
+%   idx=1;
+%   for i=tBuf
+%     [mi(:,idx),~,~]=muinfoMultiChannel(s.data,i, ...
+%       round(miWindowSize*fs),s.channels,0);
+%     idx=idx+1;
+%   end
+%   mi_avt=mean(mi,2);
+%   mi_av=mean(mi_avt);
+%   
   % Distance
   winSize=60;
   stepSec=30; 
@@ -47,12 +46,51 @@ function [features,labels]=prepareFeatures(s)
   end
   
   euDist_avt=mean(euDist,2);
-  euDist_av=mean(euDist);
+  euDist_av=mean(euDist_avt);
   euDistSort_avt=mean(euDistSort,2);
-  euDistSort_av=mean(euDistSort);
+  euDistSort_av=mean(euDistSort_avt);
 
-  features={mi,mi_avt,mi_av,euDist,euDist_avt,euDist_av,euDistSort,...
-    euDistSort_avt,euDistSort_av};
+%   features={mi,mi_avt,mi_av,euDist,euDist_avt,euDist_av,euDistSort,...
+%     euDistSort_avt,euDistSort_av};
+%   labels=[];
+  
+  % Correlation
+  winSize=60;
+  stepSec=30; 
+  colIdx=1;
+  tBuf=1:round(stepSec*fs):floor(s.data_length_sec*fs-winSize*fs);
+  corrc=zeros(intChNum,numel(tBuf));
+  corrcSort=zeros(intChNum,numel(tBuf));
+  for i=tBuf 
+    rowIdx=1;  
+    sortBuf=zeros(chNum,numel(i:i+round(winSize*fs)));
+    for m=1:chNum
+      sortBuf(m,:)=sort(s.data(m,i:i+round(winSize*fs)));
+    end
+    
+    for m=1:chNum
+      x=s.data(m,i:i+round(winSize*fs));
+      xSort=sortBuf(m,:);
+      for n=(m+1):chNum        
+        y=s.data(n,i:i+round(winSize*fs));
+        corrc(rowIdx,colIdx)=euDistance(x,y);       
+        ySort=sortBuf(n,:);
+        corrcSort(rowIdx,colIdx)=euDistance(xSort,ySort);
+        rowIdx=rowIdx+1;
+      end
+    end
+    colIdx=colIdx+1;
+  end
+  
+  corrc_avt=mean(euDist,2);
+  corrc_av=mean(euDist);
+  corrcSort_avt=mean(euDistSort,2);
+  corrcSort_av=mean(euDistSort);
+  
+  features={euDist,euDist_avt,euDist_av,...
+    euDistSort,euDistSort_avt,euDistSort_av,...
+    corrc,corrc_avt,corrc_av,...
+    corrcSort,corrcSort_avt,corrcSort_av};
   labels=[];
   
 %   % Instant amplitude and phase
