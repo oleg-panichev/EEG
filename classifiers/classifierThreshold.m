@@ -224,6 +224,8 @@ function [optTh,avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
   elseif (xSign<0)
     rslt=xUnknownTest<=avTh;
   end
+  size(xUnknownTest)
+  size(rslt)
   
   % Disp
   disp(['Optimal th (max(mean(F1 Score))): ',num2str(optTh)]);

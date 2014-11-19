@@ -34,7 +34,7 @@ for patIdx=1:numel(patBuf)
   piNum=numel(piBuf); % Number of preictal signals to process 
    
   s=load([wpath,'/',patBuf{patIdx},'/pi/',piBuf{1}]);
-  names = fieldnames(s);
+  names=fieldnames(s);
   s=eval(['s.',names{1}]);
   items=dir([wpath,'/',patBuf{patIdx},'/ii/']);
   dirs={items.name};
@@ -43,22 +43,25 @@ for patIdx=1:numel(patBuf)
   nOfObservations=piNum+iiNum;
   sequence=zeros(nOfObservations,1);
   
-  %Processing preictal data
+  features=cell(nOfObservations,1);
+  featureIdx=1;
+  
+  % Processing preictal data
   disp([piBuf{1},'...']);
   s=load([wpath,'/',patBuf{patIdx},'/pi/',piBuf{1}]);
   names = fieldnames(s);
-  s=eval(['s.',names{1}]);
-  [features,yLabels]=prepareFeatures(s);
-  featuresBuf=zeros(numel(features),nOfObservations);
-  featuresBuf(:,1)=features;
+  s=eval(['s.',names{1}]); 
+  [features{featureIdx},~]=prepareFeatures(s); 
+  featureIdx=featureIdx+1;
+%   featuresBuf=zeros(numel(features),nOfObservations);
+%   featuresBuf(:,1)=features;
   sequence(1)=s.sequence;
-  featureIdx=2;
   for i=2:piNum
     disp([piBuf{i},'...']);
     s=load([wpath,'/',patBuf{patIdx},'/pi/',piBuf{i}]);
     names = fieldnames(s);
     s=eval(['s.',names{1}]);
-    [featuresBuf(:,featureIdx),~]=prepareFeatures(s);
+    [features{featureIdx},~]=prepareFeatures(s); 
     featureIdx=featureIdx+1;
     sequence(i)=s.sequence;
   end
@@ -69,7 +72,7 @@ for patIdx=1:numel(patBuf)
     s=load([wpath,'/',patBuf{patIdx},'/ii/',iiBuf{i}]);
     names=fieldnames(s);
     s=eval(['s.',names{1}]);
-    [featuresBuf(:,featureIdx),~]=prepareFeatures(s);
+    [features{featureIdx},~]=prepareFeatures(s); 
     featureIdx=featureIdx+1;
     sequence(i+piNum)=s.sequence;
   end
@@ -115,24 +118,51 @@ for patIdx=1:numel(patBuf)
 %   savePlot2File(f,'png',[reportPath,'/',patBuf{patIdx},'/'],['MI_Distance_miWinSz=', ...
 %     num2str(miWindowSize),'s']);
   
-  % Store calculated data in total buffers
-  X=[X;featuresBuf'];
-  Y=[Y;ones(piNum,1);zeros(iiNum,1)];
-  S=[S;sequence];
-  I=[I;ones(nOfObservations,1)*patIdx];
+%   % Store calculated data in total buffers
+%   X=[X;features];
+%   Y=[Y;ones(piNum,1);zeros(iiNum,1)];
+%   S=[S;sequence];
+%   I=[I;ones(nOfObservations,1)*patIdx];
   
   if (~exist([reportPath,'/',patBuf{patIdx},'/train/'],'dir'))
     mkdir([reportPath,'/',patBuf{patIdx},'/train/']);
   end
-  Z=featuresBuf';
-  x=Z(:,1:intChNum);
+  intChNum=sum(1:(numel(s.channels)-1));
+
   featureName='MI';
+  x=getFeaturesFromCell(features,1);
   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-  x=Z(:,intChNum+1:2*intChNum);
-%   featureName='iPhaseDiff';
-%   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-%   x=Z(:,2*intChNum+1:end);
-  featureName='EuDistance'; 
+  
+  featureName='MI avt';
+  x=getFeaturesFromCell(features,2);
+  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
+  
+  featureName='MI av';
+  x=getFeaturesFromCell(features,3);
+  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
+  
+  featureName='euDist';
+  x=getFeaturesFromCell(features,1);
+  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
+  
+  featureName='euDist avt';
+  x=getFeaturesFromCell(features,2);
+  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
+  
+  featureName='euDist av';
+  x=getFeaturesFromCell(features,3);
+  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
+  
+  featureName='euDistSort';
+  x=getFeaturesFromCell(features,1);
+  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
+  
+  featureName='euDistSort avt';
+  x=getFeaturesFromCell(features,2);
+  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
+  
+  featureName='euDistSort av';
+  x=getFeaturesFromCell(features,3);
   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
 
   i=ones(nOfObservations,1)*patIdx;

@@ -36,12 +36,12 @@ featuresList={};
 % XTest=[XTest,s.x];
 % featuresList=[featuresList,fName];
 
-fName='ChSq Distance mean';
-s=load([trainPath,fName,'.mat']);
-XTrain=[XTrain,s.x];
-s=load([testPath,fName,'.mat']);
-XTest=[XTest,s.x];
-featuresList=[featuresList,fName];
+% fName='ChSq Distance mean';
+% s=load([trainPath,fName,'.mat']);
+% XTrain=[XTrain,s.x];
+% s=load([testPath,fName,'.mat']);
+% XTest=[XTest,s.x];
+% featuresList=[featuresList,fName];
 
 % fName='ChSq Distance variance';
 % s=load([trainPath,fName,'.mat']);
@@ -49,7 +49,7 @@ featuresList=[featuresList,fName];
 % s=load([testPath,fName,'.mat']);
 % XTest=[XTest,s.x];
 % featuresList=[featuresList,fName];
-% 
+
 % fName='MI mean';
 % s=load([trainPath,fName,'.mat']);
 % XTrain=[XTrain,s.x];
@@ -57,12 +57,12 @@ featuresList=[featuresList,fName];
 % XTest=[XTest,s.x];
 % featuresList=[featuresList,fName];
 % 
-% fName='MI variance';
-% s=load([trainPath,fName,'.mat']);
-% XTrain=[XTrain,s.x];
-% s=load([testPath,fName,'.mat']);
-% XTest=[XTest,s.x];
-% featuresList=[featuresList,fName];
+fName='MI variance';
+s=load([trainPath,fName,'.mat']);
+XTrain=[XTrain,s.x];
+s=load([testPath,fName,'.mat']);
+XTest=[XTest,s.x];
+featuresList=[featuresList,fName];
 % 
 % fName='iAmpl mean';
 % s=load([trainPath,fName,'.mat']);

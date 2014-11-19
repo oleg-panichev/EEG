@@ -4,7 +4,7 @@ patientsIdxBuf=[1,5];
 medianCoef=0.9; 
 nOfInterIctal=16;
 
-nOfIterations=1;
+nOfIterations=200;
 trainNumCoef=0.6;
 nOfThresholds=500;
 

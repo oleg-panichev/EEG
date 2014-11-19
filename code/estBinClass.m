@@ -6,11 +6,11 @@ function [TP,TN,FP,FN,ACC,PPV,TPR,SPC,FPR,F1,SS]=estBinClass(Y,result)
   FP=0;
   FN=0;
   for i=1:numel(Y)
-    if (Y(i)==1 && result(i)==1)
+    if (Y(i)~=0 && result(i)~=0)
       TP=TP+1;
-    elseif (Y(i)==0 && result(i)==1)
+    elseif (Y(i)==0 && result(i)~=0)
       FP=FP+1;
-    elseif (Y(i)==1 && result(i)==0)
+    elseif (Y(i)~=0 && result(i)==0)
       FN=FN+1;
     elseif (Y(i)==0 && result(i)==0)
       TN=TN+1;

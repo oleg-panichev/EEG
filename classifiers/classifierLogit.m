@@ -54,9 +54,9 @@ function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
     iiTrainIdx=iiIdx(iiPermIdx(1:nOfIiTrain));
     iiTestIdx=iiIdx(iiPermIdx(nOfIiTrain+1:end));
 
-    xTrain=[x(piTrainIdx);x(iiTrainIdx)];
+    xTrain=[x(piTrainIdx,:);x(iiTrainIdx,:)];
     yTrain=[y(piTrainIdx);y(iiTrainIdx)];
-    xTest=[x(piTestIdx);x(iiTestIdx)];
+    xTest=[x(piTestIdx,:);x(iiTestIdx,:)];
     yTest=[y(piTestIdx);y(iiTestIdx)]; 
 
     nb=fitglm(xTrain,yTrain,'Distribution','binomial');
@@ -76,6 +76,9 @@ function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
     res=p>=T(optIdx);
     
     [fpr,tpr,~,AUC_Test(iter)] = perfcurve(yTest,p,1);
+    [TP(:,iter),TN(:,iter),FP(:,iter),FN(:,iter),ACC(:,iter),PPV(:,iter),...
+      TPR(:,iter),SPC(:,iter),FPR(:,iter),F1(:,iter),SS(:,iter),~]=...
+      perfCurvesTh(yTest,p,T,1);
 
     [TP_Test(iter),TN_Test(iter),FP_Test(iter),FN_Test(iter),ACC_Test(iter),...
       PPV_Test(iter),TPR_Test(iter),SPC_Test(iter),FPR_Test(iter),...
