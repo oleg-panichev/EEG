@@ -17,38 +17,38 @@ function [features,labels]=prepareFeatures(s)
 %   mi_avt=mean(mi,2);
 %   mi_av=mean(mi_avt);
 %   
-  % Distance
-  winSize=60;
-  stepSec=30; 
-  colIdx=1;
-  tBuf=1:round(stepSec*fs):floor(s.data_length_sec*fs-winSize*fs);
-  euDist=zeros(intChNum,numel(tBuf));
-  euDistSort=zeros(intChNum,numel(tBuf));
-  for i=tBuf 
-    rowIdx=1;  
-    sortBuf=zeros(chNum,numel(i:i+round(winSize*fs)));
-    for m=1:chNum
-      sortBuf(m,:)=sort(s.data(m,i:i+round(winSize*fs)));
-    end
-    
-    for m=1:chNum
-      x=s.data(m,i:i+round(winSize*fs));
-      xSort=sortBuf(m,:);
-      for n=(m+1):chNum        
-        y=s.data(n,i:i+round(winSize*fs));
-        euDist(rowIdx,colIdx)=euDistance(x,y);       
-        ySort=sortBuf(n,:);
-        euDistSort(rowIdx,colIdx)=euDistance(xSort,ySort);
-        rowIdx=rowIdx+1;
-      end
-    end
-    colIdx=colIdx+1;
-  end
-  
-  euDist_avt=mean(euDist,2);
-  euDist_av=mean(euDist_avt);
-  euDistSort_avt=mean(euDistSort,2);
-  euDistSort_av=mean(euDistSort_avt);
+%   % Distance
+%   winSize=60;
+%   stepSec=30; 
+%   colIdx=1;
+%   tBuf=1:round(stepSec*fs):floor(s.data_length_sec*fs-winSize*fs);
+%   euDist=zeros(intChNum,numel(tBuf));
+%   euDistSort=zeros(intChNum,numel(tBuf));
+%   for i=tBuf 
+%     rowIdx=1;  
+%     sortBuf=zeros(chNum,numel(i:i+round(winSize*fs)));
+%     for m=1:chNum
+%       sortBuf(m,:)=sort(s.data(m,i:i+round(winSize*fs)));
+%     end
+%     
+%     for m=1:chNum
+%       x=s.data(m,i:i+round(winSize*fs));
+%       xSort=sortBuf(m,:);
+%       for n=(m+1):chNum        
+%         y=s.data(n,i:i+round(winSize*fs));
+%         euDist(rowIdx,colIdx)=euDistance(x,y);       
+%         ySort=sortBuf(n,:);
+%         euDistSort(rowIdx,colIdx)=euDistance(xSort,ySort);
+%         rowIdx=rowIdx+1;
+%       end
+%     end
+%     colIdx=colIdx+1;
+%   end
+%   
+%   euDist_avt=mean(euDist,2);
+%   euDist_av=mean(euDist_avt);
+%   euDistSort_avt=mean(euDistSort,2);
+%   euDistSort_av=mean(euDistSort_avt);
 
 %   features={mi,mi_avt,mi_av,euDist,euDist_avt,euDist_av,euDistSort,...
 %     euDistSort_avt,euDistSort_av};
@@ -73,23 +73,23 @@ function [features,labels]=prepareFeatures(s)
       xSort=sortBuf(m,:);
       for n=(m+1):chNum        
         y=s.data(n,i:i+round(winSize*fs));
-        corrc(rowIdx,colIdx)=euDistance(x,y);       
+        temp=corrcoef(x,y);
+        corrc(rowIdx,colIdx)=temp(1,2);       
         ySort=sortBuf(n,:);
-        corrcSort(rowIdx,colIdx)=euDistance(xSort,ySort);
+        temp=corrcoef(xSort,ySort);
+        corrcSort(rowIdx,colIdx)=temp(1,2);
         rowIdx=rowIdx+1;
       end
     end
     colIdx=colIdx+1;
   end
   
-  corrc_avt=mean(euDist,2);
-  corrc_av=mean(euDist);
-  corrcSort_avt=mean(euDistSort,2);
-  corrcSort_av=mean(euDistSort);
+  corrc_avt=mean(corrc,2);
+  corrc_av=mean(corrc_avt);
+  corrcSort_avt=mean(corrcSort,2);
+  corrcSort_av=mean(corrcSort_avt);
   
-  features={euDist,euDist_avt,euDist_av,...
-    euDistSort,euDistSort_avt,euDistSort_av,...
-    corrc,corrc_avt,corrc_av,...
+  features={corrc,corrc_avt,corrc_av,...
     corrcSort,corrcSort_avt,corrcSort_av};
   labels=[];
   

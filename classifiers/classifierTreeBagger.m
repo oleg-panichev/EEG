@@ -1,7 +1,7 @@
 function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
-  classifierTree(x,y,xUnknownTest)
+  classifierTreeBagger(x,y,xUnknownTest)
 
-  disp(['Tree: ']);
+  disp(['TreeBagger: ']);
   run('processingProperties.m');
   m=size(x,2);
   N=numel(y);
@@ -59,7 +59,7 @@ function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
     xTest=[x(piTestIdx,:);x(iiTestIdx,:)];
     yTest=[y(piTestIdx);y(iiTestIdx)]; 
 
-    cl=fitctree(xTrain,yTrain);
+    cl=TreeBagger(1000,xTrain,yTrain);
     [~,p]=predict(cl,xTrain);
     p=p(:,2);
     [TP(:,iter),TN(:,iter),FP(:,iter),FN(:,iter),ACC(:,iter),PPV(:,iter),...
@@ -68,13 +68,15 @@ function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
     [~,optIdx]=max(SS(:,iter));
     [res,p]=predict(cl,xTest);
     p=p(:,2);
-    res=p>T(optIdx);
+%     res=p>T(optIdx);
     
     [fpr,tpr,~,AUC_Test(iter)]=perfcurve(yTest,p,1);
     [TP(:,iter),TN(:,iter),FP(:,iter),FN(:,iter),ACC(:,iter),PPV(:,iter),...
       TPR(:,iter),SPC(:,iter),FPR(:,iter),F1(:,iter),SS(:,iter),~]=...
       perfCurvesTh(yTest,p,T,1);
 
+    res
+    yTest
     [TP_Test(iter),TN_Test(iter),FP_Test(iter),FN_Test(iter),ACC_Test(iter),...
       PPV_Test(iter),TPR_Test(iter),SPC_Test(iter),FPR_Test(iter),...
       F1_Test(iter),SS_Test(iter)]=estBinClass(yTest,res);
@@ -96,12 +98,9 @@ function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
   AUC=mean(AUC_Test);
   
   if (numel(xUnknownTest)>0)
-    cl=fitctree(x,y);
-    p=predict(cl,x);
-    [~,~,~,~,~,~,~,~,~,~,SS_Test,~]=perfCurvesTh(y,p,T,1);
-    [~,optIdx]=max(SS_Test);
+    cl=TreeBagger(1000,x,y);
     [rslt,p]=predict(cl,xUnknownTest);
-    rslt=p>=T(optIdx);
+%     rslt=p>=avTh;
   else
     rslt=[];
   end

@@ -1,7 +1,7 @@
 function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
-  classifierTree(x,y,xUnknownTest)
+  classifierDiscr(x,y,xUnknownTest)
 
-  disp(['Tree: ']);
+  disp(['Discriminant Analysis: ']);
   run('processingProperties.m');
   m=size(x,2);
   N=numel(y);
@@ -59,7 +59,7 @@ function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
     xTest=[x(piTestIdx,:);x(iiTestIdx,:)];
     yTest=[y(piTestIdx);y(iiTestIdx)]; 
 
-    cl=fitctree(xTrain,yTrain);
+    cl=fitcdiscr(xTrain,yTrain);
     [~,p]=predict(cl,xTrain);
     p=p(:,2);
     [TP(:,iter),TN(:,iter),FP(:,iter),FN(:,iter),ACC(:,iter),PPV(:,iter),...
@@ -68,7 +68,7 @@ function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
     [~,optIdx]=max(SS(:,iter));
     [res,p]=predict(cl,xTest);
     p=p(:,2);
-    res=p>T(optIdx);
+%     res=p>T(optIdx);
     
     [fpr,tpr,~,AUC_Test(iter)]=perfcurve(yTest,p,1);
     [TP(:,iter),TN(:,iter),FP(:,iter),FN(:,iter),ACC(:,iter),PPV(:,iter),...
@@ -96,12 +96,9 @@ function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
   AUC=mean(AUC_Test);
   
   if (numel(xUnknownTest)>0)
-    cl=fitctree(x,y);
-    p=predict(cl,x);
-    [~,~,~,~,~,~,~,~,~,~,SS_Test,~]=perfCurvesTh(y,p,T,1);
-    [~,optIdx]=max(SS_Test);
+    cl=fitcdiscr(x,y);
     [rslt,p]=predict(cl,xUnknownTest);
-    rslt=p>=T(optIdx);
+%     rslt=p>=avTh;
   else
     rslt=[];
   end

@@ -16,7 +16,7 @@ featuresList={};
 
 % Load all data
 patData=cell(numel(patBuf),1);
-fNamesList={'euDist av','euDistSort av','MI av'};
+fNamesList={'euDist av','euDistSort av','MI av','corrc av'};
 
 for patIdx=1:numel(patBuf)
   [X,fNamesStr]=loadFeaturesList(fNamesList,[reportPath,patBuf{patIdx},'/',trainPath]);
@@ -30,8 +30,8 @@ for patIdx=1:numel(patBuf)
   patData{patIdx}=data;
 end
 
-% {'threshold','nbayes','logit','svm','tree','knn'}
-classifierNames={'nbayes','logit'};
+% {'threshold','nbayes','logit','svm','tree','treebagger','knn','discr'}
+classifierNames={'nbayes','logit','svm','tree','knn','discr'};
 
 clNum=numel(classifierNames);
 T=cell(clNum,1);
@@ -54,7 +54,7 @@ for i=1:clNum
     'WriteRowNames',false,'Range','K3'); 
 end
 
-colors=[0 0 1; 1 0 0; 0 1 0; 1 0.75 0; 1 0 1; 0 0 1];
+colors=[0 0 1; 1 0 0; 0 1 0; 1 0.75 0; 1 0 1; 0 1 1];
 fig=figure;
 set(fig,'PaperPositionMode','auto');
 set(fig,'Position',[0 100 2000 1000]);
@@ -68,11 +68,14 @@ for patIdx=1:numel(patBuf)
     end
   end
   plot(0:0.1:1,0:0.1:1,'--','Color',[0 0 0]);  
-  legend([classifierNames,'0.5'],'Location','SouthEast');
+  if (patIdx==1)
+    legend([classifierNames,'0.5'],'Location','SouthEast');
+  end
   title(patBuf{patIdx}); 
   xlabel('FPR'); ylabel('TPR'); grid on;
 end
 suptitle({fNamesStr,'Train/Test = 60/40%, Not weighted data'});
+pause;
 savePlot2File(fig,'png',reportPath,'Classification_results');
 
 fig=figure;
@@ -88,11 +91,14 @@ for patIdx=1:numel(patBuf)
     end
   end
   plot(0:0.1:1,0:0.1:1,'--','Color',[0 0 0]);  
-  legend([classifierNames,'0.5'],'Location','SouthEast');
+  if (patIdx==1)
+    legend([classifierNames,'0.5'],'Location','SouthEast');
+  end
   title(patBuf{patIdx}); 
   xlabel('FPR'); ylabel('TPR'); grid on;
 end
 suptitle('Train/Test = 60/40%, Weighted data');
+pause;
 savePlot2File(fig,'png',reportPath,'Classification_results_wght');
 
 

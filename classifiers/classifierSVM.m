@@ -18,7 +18,7 @@ function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
   nOfIiTest=nOfIi-nOfIiTrain;
   
   % Allocate buffers
-  [T]=getThresholds([0 1],nOfThresholds);
+  [T]=getThresholds([-1 1],nOfThresholds);
   ACC=zeros(nOfThresholds,nOfIterations);
   PPV=zeros(nOfThresholds,nOfIterations);
   TPR=zeros(nOfThresholds,nOfIterations);

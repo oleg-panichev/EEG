@@ -49,12 +49,10 @@ for patIdx=1:numel(patBuf)
   % Processing preictal data
   disp([piBuf{1},'...']);
   s=load([wpath,'/',patBuf{patIdx},'/pi/',piBuf{1}]);
-  names = fieldnames(s);
+  names=fieldnames(s);
   s=eval(['s.',names{1}]); 
   [features{featureIdx},~]=prepareFeatures(s); 
   featureIdx=featureIdx+1;
-%   featuresBuf=zeros(numel(features),nOfObservations);
-%   featuresBuf(:,1)=features;
   sequence(1)=s.sequence;
   for i=2:piNum
     disp([piBuf{i},'...']);
@@ -141,36 +139,51 @@ for patIdx=1:numel(patBuf)
   
 %   x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
 %   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-  featureName='MI';
-  s=load([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat']);
-  x=mean(mean(s.x,2));
-  featureName='MI av';
-  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
+
+%   featureName='MI';
+%   s=load([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat']);
+%   x=zeros(size(s.x,1),1);
+%   for i=1:size(s.x,1)
+%     temp=reshape(s.x(i,:),intChNum,size(s.x,2)/intChNum);
+%     x(i)=mean(mean(temp,2));
+%   end  
+%   featureName='MI av';
+%   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
   
-  featureName='euDist';
-  x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
-  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
+%   featureName='corrcSort';
+%   s=load([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat']);
+%   x=zeros(size(s.x,1),1);
+%   for i=1:size(s.x,1)
+%     temp=reshape(s.x(i,:),intChNum,size(s.x,2)/intChNum);
+%     x(i)=mean(mean(temp,2));
+%   end  
+%   featureName='corrcSort av';
+%   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
   
-  featureName='euDist avt';
-  x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
-  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-  
-  featureName='euDist av';
-  x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
-  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-  
-  featureName='euDistSort';
-  x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
-  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-  
-  featureName='euDistSort avt';
-  x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
-  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-  
-  featureName='euDistSort av';
-  x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
-  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-  
+%   featureName='euDist';
+%   x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
+%   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
+%   
+%   featureName='euDist avt';
+%   x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
+%   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
+%   
+%   featureName='euDist av';
+%   x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
+%   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
+%   
+%   featureName='euDistSort';
+%   x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
+%   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
+%   
+%   featureName='euDistSort avt';
+%   x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
+%   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
+%   
+%   featureName='euDistSort av';
+%   x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
+%   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
+%   
   featureName='corrc';
   x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
