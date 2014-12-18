@@ -59,22 +59,26 @@ function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
     xTest=[x(piTestIdx,:);x(iiTestIdx,:)];
     yTest=[y(piTestIdx);y(iiTestIdx)]; 
 
-    nb=fitNaiveBayes(xTrain,yTrain);
-%     p=predict(nb,xTrain);
-    p=posterior(nb,xTrain);
+    mdl=fitNaiveBayes(xTrain,yTrain);
+    p=posterior(mdl,xTrain);
     p=p(:,2);
     [TP(:,iter),TN(:,iter),FP(:,iter),FN(:,iter),ACC(:,iter),PPV(:,iter),...
       TPR(:,iter),SPC(:,iter),FPR(:,iter),F1(:,iter),SS(:,iter),~]=...
       perfCurvesTh(yTrain,p,T,1);
     [~,optIdx]=max(SS(:,iter));
-    p=posterior(nb,xTest);
+    p=posterior(mdl,xTest);
     p=p(:,2);
-    res=predict(nb,xTest);
-%     res=p>T(optIdx);
+    res=predict(mdl,xTest);
+
     
     [fpr,tpr,~,AUC_Test(iter)] = perfcurve(yTest,p,1);
+    FPR(:,iter)=0:1/(nOfThresholds-1):1;
+    [fpr,idxSort]=sort(fpr);
+    tpr=tpr(idxSort);
+    TPR(:,iter)=interp1q(fpr,tpr,FPR(:,iter));
+    
     [TP(:,iter),TN(:,iter),FP(:,iter),FN(:,iter),ACC(:,iter),PPV(:,iter),...
-      TPR(:,iter),SPC(:,iter),FPR(:,iter),F1(:,iter),SS(:,iter),~]=...
+      ~,SPC(:,iter),~,F1(:,iter),SS(:,iter),~]=...
       perfCurvesTh(yTest,p,T,1);
 
     [TP_Test(iter),TN_Test(iter),FP_Test(iter),FN_Test(iter),ACC_Test(iter),...
@@ -98,8 +102,8 @@ function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
   AUC=mean(AUC_Test);
   
   if (numel(xUnknownTest)>0)
-    nb=fitNaiveBayes(x,y);
-    rslt=predict(nb,xUnknownTest);
+    mdl=fitNaiveBayes(x,y);
+    rslt=predict(mdl,xUnknownTest);
 %     rslt=p>=avTh;
   else
     rslt=[];

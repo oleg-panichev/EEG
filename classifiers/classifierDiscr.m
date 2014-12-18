@@ -59,20 +59,25 @@ function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
     xTest=[x(piTestIdx,:);x(iiTestIdx,:)];
     yTest=[y(piTestIdx);y(iiTestIdx)]; 
 
-    cl=fitcdiscr(xTrain,yTrain);
-    [~,p]=predict(cl,xTrain);
+    mdl=fitcdiscr(xTrain,yTrain);
+    [~,p]=predict(mdl,xTrain);
     p=p(:,2);
     [TP(:,iter),TN(:,iter),FP(:,iter),FN(:,iter),ACC(:,iter),PPV(:,iter),...
       TPR(:,iter),SPC(:,iter),FPR(:,iter),F1(:,iter),SS(:,iter),~]=...
       perfCurvesTh(yTrain,p,T,1);
     [~,optIdx]=max(SS(:,iter));
-    [res,p]=predict(cl,xTest);
+    [~,p]=predict(mdl,xTest);
     p=p(:,2);
-%     res=p>T(optIdx);
+    res=p>T(optIdx);
     
     [fpr,tpr,~,AUC_Test(iter)]=perfcurve(yTest,p,1);
+    FPR(:,iter)=0:1/(nOfThresholds-1):1;
+    [fpr,idxSort]=sort(fpr);
+    tpr=tpr(idxSort);
+    TPR(:,iter)=interp1q(fpr,tpr,FPR(:,iter));
+    
     [TP(:,iter),TN(:,iter),FP(:,iter),FN(:,iter),ACC(:,iter),PPV(:,iter),...
-      TPR(:,iter),SPC(:,iter),FPR(:,iter),F1(:,iter),SS(:,iter),~]=...
+      ~,SPC(:,iter),~,F1(:,iter),SS(:,iter),~]=...
       perfCurvesTh(yTest,p,T,1);
 
     [TP_Test(iter),TN_Test(iter),FP_Test(iter),FN_Test(iter),ACC_Test(iter),...
@@ -96,9 +101,22 @@ function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
   AUC=mean(AUC_Test);
   
   if (numel(xUnknownTest)>0)
-    cl=fitcdiscr(x,y);
-    [rslt,p]=predict(cl,xUnknownTest);
-%     rslt=p>=avTh;
+    mdl=fitcdiscr(x,y);
+    [~,p]=predict(mdl,x);
+    p=p(:,2);
+    figure
+    hist(p,20);
+    [~,~,~,~,~,~,~,~,~,~,SS_utest,AUC_utest]=...
+      perfCurvesTh(y,p,T,1);
+    [~,optIdx]=max(SS_utest);
+    disp(['AUC TEST = ',num2str(AUC_utest)]);
+    
+    [~,p]=predict(mdl,xUnknownTest);
+    p=p(:,2);
+    figure
+    hist(p,20);
+    rslt=p>T(optIdx);
+    disp(['# of preictals = ',num2str(sum(rslt))]);
   else
     rslt=[];
   end

@@ -1,7 +1,6 @@
 addpath('code');
 addpath('classes');
 addpath('classifiers');
-% addpath('lr');
 addpath('plot');
 prepareWorkspace();
 
@@ -16,98 +15,82 @@ featuresList={};
 
 % Load all data
 patData=cell(numel(patBuf),1);
-fNamesList={'euDist av','euDistSort av','MI av','corrc av'};
+% fNamesList={'euDist av','euDist var','euDistSort av','euDistSort var',...
+%   'corrc av','corrc var','MI av','MI var','iAmpl av','iAmpl var',...
+%   'iPhase av','iPhase var','iPhaseDiff av','iPhaseDiff var',...
+%   'iPhaseDiff avt'};
+fNamesList={'corrc_30_avt'};
 
+sNamesBuf_Test=[];
 for patIdx=1:numel(patBuf)
-  [X,fNamesStr]=loadFeaturesList(fNamesList,[reportPath,patBuf{patIdx},'/',trainPath]);
+  [X,fNamesStr,fNamesStrl]=loadFeaturesList(fNamesList,[reportPath,patBuf{patIdx},'/',trainPath]);
+  if (runOnTestDataFlag>0)
+    [X_test,~,~]=loadFeaturesList(fNamesList,[reportPath,patBuf{patIdx},'/',testPath]);
+    s=load([reportPath,patBuf{patIdx},'/',testPath,'sNamesBuf.mat']);
+    sNamesBuf_Test=[sNamesBuf_Test,s.testBuf];
+  else
+    X_test=[];
+  end
   
   s=load([reportPath,patBuf{patIdx},'/',trainPath,'y.mat']);
   Y=s.y;
   s=load([reportPath,patBuf{patIdx},'/',trainPath,'s.mat']);
   S=s.sequence;
+
+%   [X,fNamesStr,fNamesStrl,S,Y]=loadFeaturesListUnpack(fNamesList,[reportPath,patBuf{patIdx},'/',trainPath],1);
   
-  data=struct('X',X,'Y',Y,'S',S);
+  data=struct('X',X,'Y',Y,'S',S,'X_test',X_test);
   patData{patIdx}=data;
 end
 
-% {'threshold','nbayes','logit','svm','tree','treebagger','knn','discr'}
-classifierNames={'nbayes','logit','svm','tree','knn','discr'};
+allClassNames={'threshold','nbayes','logit','svm','tree','treebagger',...
+  'knn','discr'};
+% classifierNames={'nbayes','logit','svm','tree',...
+%   'knn','discr'};
+classifierNames={'nbayes','logit','svm','tree',...
+  'knn','discr'};
 
 clNum=numel(classifierNames);
 T=cell(clNum,1);
 TWght=cell(clNum,1);
 ROCs=cell(clNum,1);
 ROCsWght=cell(clNum,1);
+RSLT=cell(clNum,1);
 
 for i=1:clNum
-  [T{i},TWght{i},ROCs{i},ROCsWght{i},~]=runIndClassification(patData,classifierNames{i},patBuf);
+  [T{i},TWght{i},ROCs{i},ROCsWght{i},RSLT{i}]=runIndClassification(patData,...
+    classifierNames{i},patBuf);
   
   t=cell(1,2);
-  t{1,1}=classifierNames{i};
-  t{2,1}=fNamesStr;
+  t{1,1}=[classifierNames{i},', number of iterations: ',num2str(nOfIterations)];
+  t{2,1}=fNamesStrl;
   t=cell2table(t);
-  writetable(t,'classification_results.xlsx','Sheet',i,...
+  for k=1:numel(allClassNames)
+    if strcmp(classifierNames{i},allClassNames{k});
+      break;
+    end
+  end
+  writetable(t,'classification_results.xlsx','Sheet',k,...
     'WriteRowNames',false,'WriteVariableNames',false,'Range','A1');
-  writetable(T{i},'classification_results.xlsx','Sheet',i,...
+  writetable(T{i},'classification_results.xlsx','Sheet',k,...
     'WriteRowNames',true,'Range','A3');
-  writetable(TWght{i},'classification_results.xlsx','Sheet',i,...
+  writetable(TWght{i},'classification_results.xlsx','Sheet',k,...
     'WriteRowNames',false,'Range','K3'); 
 end
 
-colors=[0 0 1; 1 0 0; 0 1 0; 1 0.75 0; 1 0 1; 0 1 1];
-fig=figure;
-set(fig,'PaperPositionMode','auto');
-set(fig,'Position',[0 100 2000 1000]);
-set(fig,'DefaultAxesLooseInset',[0,0.1,0,0]);
-for patIdx=1:numel(patBuf)
-  subplot(2,4,patIdx);
-  for i=1:clNum
-    if (numel(ROCs{i,1}{patIdx,1})>0)
-      plot(ROCs{i,1}{patIdx,1}(:,1),ROCs{i,1}{patIdx,1}(:,2), ...
-        'Color',colors(i,:),'Linewidth',2); hold on;      
-    end
+plotROCs(classifierNames,patBuf,ROCs,ROCsWght,T,TWght,fNamesStr);
+
+if (runOnTestDataFlag>0)
+  disp('Writing results to submition file...');
+  t=clock;
+  fileID=fopen(['submit_',num2str(t(1)),num2str(t(2)),num2str(t(3)),...
+    '_',num2str(t(4)),num2str(t(5)),'.csv'],'w');
+  fprintf(fileID,'clip,preictal\n');
+  nOfPi=0;
+  for i=1:size(RSLT{clResultNumber,1},1)
+    fprintf(fileID,[sNamesBuf_Test{i},',%d\n'],RSLT{clResultNumber,1}(i));
   end
-  plot(0:0.1:1,0:0.1:1,'--','Color',[0 0 0]);  
-  if (patIdx==1)
-    legend([classifierNames,'0.5'],'Location','SouthEast');
-  end
-  title(patBuf{patIdx}); 
-  xlabel('FPR'); ylabel('TPR'); grid on;
+  fclose(fileID);
+  disp('Done!');
 end
-suptitle({fNamesStr,'Train/Test = 60/40%, Not weighted data'});
-pause;
-savePlot2File(fig,'png',reportPath,'Classification_results');
 
-fig=figure;
-set(fig,'PaperPositionMode','auto');
-set(fig,'Position',[0 100 1350 600]);
-set(fig,'DefaultAxesLooseInset',[0,0.1,0,0]);
-for patIdx=1:numel(patBuf)
-  subplot(2,4,patIdx);
-  for i=1:clNum
-    if (numel(ROCsWght{i,1}{patIdx,1})>0)
-      plot(ROCsWght{i,1}{patIdx,1}(:,1),ROCsWght{i,1}{patIdx,1}(:,2), ...
-        'Color',colors(i,:),'Linewidth',2); hold on;      
-    end
-  end
-  plot(0:0.1:1,0:0.1:1,'--','Color',[0 0 0]);  
-  if (patIdx==1)
-    legend([classifierNames,'0.5'],'Location','SouthEast');
-  end
-  title(patBuf{patIdx}); 
-  xlabel('FPR'); ylabel('TPR'); grid on;
-end
-suptitle('Train/Test = 60/40%, Weighted data');
-pause;
-savePlot2File(fig,'png',reportPath,'Classification_results_wght');
-
-
-% t=clock;
-% fileID=fopen(['submit_',num2str(t(1)),num2str(t(2)),num2str(t(3)),...
-%   '_',num2str(t(4)),num2str(t(5)),'.csv'],'w');
-% fprintf(fileID,'clip,preictal\n');
-% nOfPi=0;
-% for i=1:size(XTest,1)
-%   fprintf(fileID,[sNamesBuf_Test{i},',%d\n'],RSLT(i));
-% end
-% fclose(fileID);

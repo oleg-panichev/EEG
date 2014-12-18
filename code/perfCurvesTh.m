@@ -8,7 +8,6 @@
 %         if < 0 then positive class have X < threshold
 %
 function [TP,TN,FP,FN,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC]=perfCurvesTh(Y,X,T,xSign)
-  T=getThresholds(X,500);
   TP=zeros(size(T));
   TN=zeros(size(T));
   FP=zeros(size(T));

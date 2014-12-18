@@ -37,60 +37,34 @@ for patIdx=1:numel(patBuf)
   s=eval(['s.',names{1}]);  
   
   I=[I;ones(testNum,1)*patIdx];
+  nOfObservations=testNum;
+  features=cell(nOfObservations,1);
+  featureIdx=1;
   
   %Processing preictal data
   disp([testBuf{1},'...']);
   s=load([wpath,'/',patBuf{patIdx},'/test/',testBuf{1}]);
   names = fieldnames(s);
   s=eval(['s.',names{1}]);
-  [features,yLabels]=prepareFeatures(s);
-  featuresBuf=zeros(numel(features),testNum);
-  featuresBuf(:,1)=features;
-  featureIdx=2;
-  for i=2:testNum
+  [features{featureIdx},labels]=prepareFeatures(s); 
+  featureIdx=featureIdx+1;
+  for i=2:nOfObservations
     disp([testBuf{i},'...']);
     s=load([wpath,'/',patBuf{patIdx},'/test/',testBuf{i}]);
     names = fieldnames(s);
     s=eval(['s.',names{1}]);
-    [featuresBuf(:,featureIdx),~]=prepareFeatures(s);
+    [features{featureIdx},~]=prepareFeatures(s);
     featureIdx=featureIdx+1;
   end
   
   % Store calculated data in total buffers
-  X=[X;featuresBuf'];
-  sNamesBuf=[sNamesBuf,testBuf];
-  
-  Z=featuresBuf';
-  x=Z(:,1);
-  featureName='iAmpl mean';
-  save([reportPath,'/',patBuf{patIdx},'/',featureName,'.mat'],'x');
-  x=Z(:,2);
-  featureName='iAmpl variance';
-  save([reportPath,'/',patBuf{patIdx},'/',featureName,'.mat'],'x');
-  x=Z(:,3);
-  featureName='iPhase mean';
-  save([reportPath,'/',patBuf{patIdx},'/',featureName,'.mat'],'x');
-  x=Z(:,4);
-  featureName='iPhase variance';
-  save([reportPath,'/',patBuf{patIdx},'/',featureName,'.mat'],'x');
+  for k=1:numel(labels)
+    featureName=labels{k};
+    x=getFeaturesFromCell(features,k); 
+    save([reportPath,'/',patBuf{patIdx},'/test/',featureName,'.mat'],'x');
+  end
 
   save([reportPath,'/',patBuf{patIdx},'/','sNamesBuf.mat'],'testBuf');
   i=ones(testNum,1)*patIdx;
   save([reportPath,'/',patBuf{patIdx},'/','i','.mat'],'i');
 end
-
-
-x=X(:,1);
-featureName='iAmpl mean';
-save([testPath,featureName,'.mat'],'x');
-x=X(:,2);
-featureName='iAmpl variance';
-save([testPath,featureName,'.mat'],'x');
-x=X(:,3);
-featureName='iPhase mean';
-save([testPath,featureName,'.mat'],'x');
-x=X(:,4);
-featureName='iPhase variance';
-save([testPath,featureName,'.mat'],'x');
-save([testPath,'i','.mat'],'I');
-save([testPath,'sNamesBuf.mat'],'sNamesBuf');

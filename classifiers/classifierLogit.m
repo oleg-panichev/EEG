@@ -59,25 +59,25 @@ function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
     xTest=[x(piTestIdx,:);x(iiTestIdx,:)];
     yTest=[y(piTestIdx);y(iiTestIdx)]; 
 
-    nb=fitglm(xTrain,yTrain,'Distribution','binomial');
-%     nb=mnrfit(xTrain,yTrain);
-    p=predict(nb,xTrain);
-%     p=posterior(nb,xTrain);
-%     p=p(:,2);
-%     p=mnrval(nb,xTrain);
+    mdl=fitglm(xTrain,yTrain,'Distribution','binomial');
+    p=predict(mdl,xTrain);
+
     [TP(:,iter),TN(:,iter),FP(:,iter),FN(:,iter),ACC(:,iter),PPV(:,iter),...
       TPR(:,iter),SPC(:,iter),FPR(:,iter),F1(:,iter),SS(:,iter),~]=...
       perfCurvesTh(yTrain,p,T,1);
     [~,optIdx]=max(SS(:,iter));
-%     p=mnrval(nb,xTest);
-%     p=posterior(nb,xTest);
-%     p=p(:,2);
-    p=predict(nb,xTest);
+
+    p=predict(mdl,xTest);
     res=p>=T(optIdx);
     
     [fpr,tpr,~,AUC_Test(iter)] = perfcurve(yTest,p,1);
+    FPR(:,iter)=0:1/(nOfThresholds-1):1;
+    [fpr,idxSort]=sort(fpr);
+    tpr=tpr(idxSort);
+    TPR(:,iter)=interp1q(fpr,tpr,FPR(:,iter));
+    
     [TP(:,iter),TN(:,iter),FP(:,iter),FN(:,iter),ACC(:,iter),PPV(:,iter),...
-      TPR(:,iter),SPC(:,iter),FPR(:,iter),F1(:,iter),SS(:,iter),~]=...
+      ~,SPC(:,iter),~,F1(:,iter),SS(:,iter),~]=...
       perfCurvesTh(yTest,p,T,1);
 
     [TP_Test(iter),TN_Test(iter),FP_Test(iter),FN_Test(iter),ACC_Test(iter),...
@@ -101,8 +101,8 @@ function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
   AUC=mean(AUC_Test);
   
   if (numel(xUnknownTest)>0)
-    nb=fitglm(x,y,'Distribution','binomial');
-    p=predict(nb,xUnknownTest);
+    mdl=fitglm(x,y,'Distribution','binomial');
+    p=predict(mdl,xUnknownTest);
 %     nb=mnrfit(x,y);
 %     p=mnrval(nb,xUnknownTest);
     rslt=p>=avTh;

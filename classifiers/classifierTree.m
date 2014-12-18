@@ -18,7 +18,7 @@ function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
   nOfIiTest=nOfIi-nOfIiTrain;
   
   % Allocate buffers
-  [T]=getThresholds([-1 1],nOfThresholds);
+  [T]=getThresholds([0 1],nOfThresholds);
   ACC=zeros(nOfThresholds,nOfIterations);
   PPV=zeros(nOfThresholds,nOfIterations);
   TPR=zeros(nOfThresholds,nOfIterations);
@@ -71,8 +71,13 @@ function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
     res=p>T(optIdx);
     
     [fpr,tpr,~,AUC_Test(iter)]=perfcurve(yTest,p,1);
+    FPR(:,iter)=0:1/(nOfThresholds-1):1;
+    [fpr,idxSort]=sort(fpr);
+    tpr=tpr(idxSort);
+    TPR(:,iter)=interp1q(fpr,tpr,FPR(:,iter));
+    
     [TP(:,iter),TN(:,iter),FP(:,iter),FN(:,iter),ACC(:,iter),PPV(:,iter),...
-      TPR(:,iter),SPC(:,iter),FPR(:,iter),F1(:,iter),SS(:,iter),~]=...
+      ~,SPC(:,iter),~,F1(:,iter),SS(:,iter),~]=...
       perfCurvesTh(yTest,p,T,1);
 
     [TP_Test(iter),TN_Test(iter),FP_Test(iter),FN_Test(iter),ACC_Test(iter),...

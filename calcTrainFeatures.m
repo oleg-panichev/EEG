@@ -21,7 +21,7 @@ S=[]; % Total sequence vector
 I=[]; % Total patient index
 
 % Data and features research
-for patIdx=1:numel(patBuf)
+for patIdx=6:6%numel(patBuf)
 %   disp(['Processing: ',patBuf{patIdx}]);
   % Prepare report dir for patient
   if (~exist([reportPath,patBuf{patIdx}],'dir'))
@@ -51,7 +51,7 @@ for patIdx=1:numel(patBuf)
   s=load([wpath,'/',patBuf{patIdx},'/pi/',piBuf{1}]);
   names=fieldnames(s);
   s=eval(['s.',names{1}]); 
-  [features{featureIdx},~]=prepareFeatures(s); 
+  [features{featureIdx},labels]=prepareFeatures(s); 
   featureIdx=featureIdx+1;
   sequence(1)=s.sequence;
   for i=2:piNum
@@ -127,86 +127,21 @@ for patIdx=1:numel(patBuf)
   end
   intChNum=sum(1:(numel(s.channels)-1));
 
-  fIdx=1;
-%   featureName='MI';
-%   x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
-%   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-%   
-%   featureName='MI avt';
-%   x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
-%   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-%   
-  
-%   x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
-%   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-
 %   featureName='MI';
 %   s=load([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat']);
 %   x=zeros(size(s.x,1),1);
 %   for i=1:size(s.x,1)
 %     temp=reshape(s.x(i,:),intChNum,size(s.x,2)/intChNum);
-%     x(i)=mean(mean(temp,2));
+%     x(i)=var(mean(temp,2));
 %   end  
-%   featureName='MI av';
+%   featureName='MI var';
 %   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
   
-%   featureName='corrcSort';
-%   s=load([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat']);
-%   x=zeros(size(s.x,1),1);
-%   for i=1:size(s.x,1)
-%     temp=reshape(s.x(i,:),intChNum,size(s.x,2)/intChNum);
-%     x(i)=mean(mean(temp,2));
-%   end  
-%   featureName='corrcSort av';
-%   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-  
-%   featureName='euDist';
-%   x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
-%   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-%   
-%   featureName='euDist avt';
-%   x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
-%   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-%   
-%   featureName='euDist av';
-%   x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
-%   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-%   
-%   featureName='euDistSort';
-%   x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
-%   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-%   
-%   featureName='euDistSort avt';
-%   x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
-%   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-%   
-%   featureName='euDistSort av';
-%   x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
-%   save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-%   
-  featureName='corrc';
-  x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
-  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-  
-  featureName='corrc avt';
-  x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
-  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-  
-  featureName='corrc av';
-  x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
-  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-  
-  featureName='corrcSort';
-  x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
-  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-  
-  featureName='corrcSort avt';
-  x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
-  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
-  
-  featureName='corrcSort av';
-  x=getFeaturesFromCell(features,fIdx); fIdx=fIdx+1;
-  save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
+  for k=1:numel(labels)
+    featureName=labels{k};
+    x=getFeaturesFromCell(features,k); 
+    save([reportPath,'/',patBuf{patIdx},'/train/',featureName,'.mat'],'x');
+  end
 
   i=ones(nOfObservations,1)*patIdx;
   save([reportPath,'/',patBuf{patIdx},'/train/','i','.mat'],'i');
@@ -239,5 +174,3 @@ end
 % x=X(:,4);
 % featureName4='iPhase variance';
 % save([trainPath,featureName4,'.mat'],'x');
-
-% perfcurve

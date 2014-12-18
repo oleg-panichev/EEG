@@ -18,6 +18,7 @@ function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
   nOfIiTest=nOfIi-nOfIiTrain;
   
   % Allocate buffers
+%   nOfThresholds=3;
   [T]=getThresholds([0 1],nOfThresholds);
   ACC=zeros(nOfThresholds,nOfIterations);
   PPV=zeros(nOfThresholds,nOfIterations);
@@ -60,26 +61,23 @@ function [avTh,ACC,PPV,TPR,SPC,FPR,F1,SS,AUC,meanROC,rslt]=...
     yTest=[y(piTestIdx);y(iiTestIdx)]; 
 
     cl=fitcknn(xTrain,yTrain);
-    [~,p]=predict(cl,xTrain);
-    p=p(:,2);
-    [TP(:,iter),TN(:,iter),FP(:,iter),FN(:,iter),ACC(:,iter),PPV(:,iter),...
-      TPR(:,iter),SPC(:,iter),FPR(:,iter),F1(:,iter),SS(:,iter),~]=...
-      perfCurvesTh(yTrain,p,T,1);
-    [~,optIdx]=max(SS(:,iter));
     [res,p]=predict(cl,xTest);
-    p=p(:,2);
-%     res=p>T(optIdx);
     
-    [fpr,tpr,~,AUC_Test(iter)]=perfcurve(yTest,p,1);
+    [fpr,tpr,~,AUC_Test(iter)]=perfcurve(yTest,p(:,2),1,'xvals','all');
+    FPR(:,iter)=0:1/(nOfThresholds-1):1;
+    [fpr,idxSort]=sort(fpr);
+    tpr=tpr(idxSort);
+    TPR(:,iter)=interp1q(fpr,tpr,FPR(:,iter));
+    
     [TP(:,iter),TN(:,iter),FP(:,iter),FN(:,iter),ACC(:,iter),PPV(:,iter),...
-      TPR(:,iter),SPC(:,iter),FPR(:,iter),F1(:,iter),SS(:,iter),~]=...
+      ~,SPC(:,iter),~,F1(:,iter),SS(:,iter),~]=...
       perfCurvesTh(yTest,p,T,1);
 
     [TP_Test(iter),TN_Test(iter),FP_Test(iter),FN_Test(iter),ACC_Test(iter),...
       PPV_Test(iter),TPR_Test(iter),SPC_Test(iter),FPR_Test(iter),...
       F1_Test(iter),SS_Test(iter)]=estBinClass(yTest,res);
   
-    thBuf(iter)=T(optIdx);
+    thBuf(iter)=0;
   end
   
   meanROC=[mean(FPR,2),mean(TPR,2)];
