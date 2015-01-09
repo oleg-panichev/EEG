@@ -1,19 +1,26 @@
-function [features,labels]=prepareFeatures(s)
+function [features,labels]=prepareFeatures10min(s)
   run('processingProperties.m');
   fs=s.sampling_frequency;
+  stepSec=30; 
+  miWindowSize = 0.5;
+  tBuf = 1:round(stepSec*fs):floor(s.data_length_sec*fs-miWindowSize*fs);
   chNum=numel(s.channels);
   intChNum=sum(1:(chNum-1));
   
   features=[];
   labels=[];
 
-  % Mutual information
-  mi=zeros(intChNum,1);
-  idx=1;
-  [mi(:),~,~]=muinfoMultiChannel(s.data,1, ...
-    size(s.data,1),s.channels,0);
-  mi_av=mean(mi_avt);
-  mi_var=var(mi_avt);
+  %% Mutual information
+%   mi=zeros(intChNum,numel(tBuf));
+%   idx=1;
+%   for i=tBuf
+%     [mi(:,idx),~,~]=muinfoMultiChannel(s.data,i, ...
+%       round(miWindowSize*fs),s.channels,0);
+%     idx=idx+1;
+%   end
+%   mi_avt=mean(mi,2);
+%   mi_av=mean(mi_avt);
+%   mi_var=var(mi_avt);
   
   %% Euclidian Distance, Chi Square Distance, Bray-Curtis Dissimilarity
 %   winSize=60;

@@ -22,11 +22,12 @@ end
 for db_idx=1:numel(db_list)
   if (strcmp(db_list{db_idx},'aes_spc'))
     calcFeatures_aes_spc([db_location,'/',db_list{db_idx},'/']);
-    calcFeatures_aes_spc_kaggleTest([db_location,'/',db_list{db_idx},'/']);
+%     calcFeatures_aes_spc_kaggleTest([db_location,'/',db_list{db_idx},'/']);
   elseif (strcmp(db_list{db_idx},'ch_sleep_kharitonov'))
-    calcFeatures_ch_sleep_kharitonov();
+    calcFeatures_ch_sleep_kharitonov([db_location,'/',db_list{db_idx},'/']);   
   else
     warning(['No feature calculation function for ',db_list{db_idx},...
       ' database!']);
   end
 end
+
