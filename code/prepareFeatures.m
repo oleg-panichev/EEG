@@ -1,5 +1,5 @@
-function [features,labels]=prepareFeatures(s)
-  run('processingProperties.m');
+function [features,labels]=prepareFeatures(propertiesFile,s)
+  run(propertiesFile);
   fs=s.sampling_frequency;
   chNum=numel(s.channels);
   intChNum=sum(1:(chNum-1));
@@ -76,45 +76,48 @@ function [features,labels]=prepareFeatures(s)
 %   brCuDissSort_av=mean(brCuDissSort_avt);
 %   brCuDissSort_var=var(brCuDissSort_avt);
 
-%   %% Correlation 0.5s
-%   winSize=0.5;
-%   stepSec=30; 
-%   colIdx=1;
-%   tBuf=1:round(stepSec*fs):floor(s.data_length_sec*fs-winSize*fs);
-%   corrc=zeros(intChNum,numel(tBuf));
-%   corrcSort=zeros(intChNum,numel(tBuf));
-%   for i=tBuf 
-%     rowIdx=1;  
-%     sortBuf=zeros(chNum,numel(i:i+round(winSize*fs)));
-%     for m=1:chNum
-%       sortBuf(m,:)=sort(s.data(m,i:i+round(winSize*fs)));
-%     end
-%     
-%     for m=1:chNum
-%       x=s.data(m,i:i+round(winSize*fs));
-%       xSort=sortBuf(m,:);
-%       for n=(m+1):chNum        
-%         y=s.data(n,i:i+round(winSize*fs));
-%         temp=corrcoef(x,y);
-%         corrc(rowIdx,colIdx)=temp(1,2);       
-%         ySort=sortBuf(n,:);
-%         temp=corrcoef(xSort,ySort);
-%         corrcSort(rowIdx,colIdx)=temp(1,2);
-%         rowIdx=rowIdx+1;
-%       end
-%     end
-%     colIdx=colIdx+1;
-%   end
-%   
-%   corrc_05=corrc;  
-%   corrc_05_avt=mean(corrc,2);
-%   corrc_05_av=mean(corrc_05_avt);
-%   corrc_05_var=var(corrc_05_avt);
-%   corrcSort_05=corrcSort;
-%   corrcSort_05_avt=mean(corrcSort,2);
-%   corrcSort_05_av=mean(corrcSort_05_avt);
-%   corrcSort_05_var=var(corrcSort_05_avt);
-%   
+  %% Correlation 0.5s
+  winSize=0.5;
+  stepSec=30; 
+  colIdx=1;
+  
+  calcCorrFeatures();
+  
+  tBuf=1:round(stepSec*fs):floor(s.data_length_sec*fs-winSize*fs);
+  corrc=zeros(intChNum,numel(tBuf));
+  corrcSort=zeros(intChNum,numel(tBuf));
+  for i=tBuf 
+    rowIdx=1;  
+    sortBuf=zeros(chNum,numel(i:i+round(winSize*fs)));
+    for m=1:chNum
+      sortBuf(m,:)=sort(s.data(m,i:i+round(winSize*fs)));
+    end
+    
+    for m=1:chNum
+      x=s.data(m,i:i+round(winSize*fs));
+      xSort=sortBuf(m,:);
+      for n=(m+1):chNum        
+        y=s.data(n,i:i+round(winSize*fs));
+        temp=corrcoef(x,y);
+        corrc(rowIdx,colIdx)=temp(1,2);       
+        ySort=sortBuf(n,:);
+        temp=corrcoef(xSort,ySort);
+        corrcSort(rowIdx,colIdx)=temp(1,2);
+        rowIdx=rowIdx+1;
+      end
+    end
+    colIdx=colIdx+1;
+  end
+  
+  corrc_05=corrc;  
+  corrc_05_avt=mean(corrc,2);
+  corrc_05_av=mean(corrc_05_avt);
+  corrc_05_var=var(corrc_05_avt);
+  corrcSort_05=corrcSort;
+  corrcSort_05_avt=mean(corrcSort,2);
+  corrcSort_05_av=mean(corrcSort_05_avt);
+  corrcSort_05_var=var(corrcSort_05_avt);
+  
 %   %% Correlation 1s
 %   winSize=1;
 %   stepSec=30; 

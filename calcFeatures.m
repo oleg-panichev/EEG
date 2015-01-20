@@ -1,33 +1,33 @@
-addpath('calcFeatures');
-addpath('code');
-addpath('classes');
-addpath('plot');
-prepareWorkspace();
+function calcFeatures(propertiesFunction)
+  addpath('calcFeatures');
+  addpath('classes');
+  addpath('code');
+  addpath('plot');
+  prepareWorkspace();
+  propertiesFunction();
 
-run('processingProperties.m');
+  X=[]; % Total features matrix
+  Y=[]; % Total output matrix
+  S=[]; % Total sequence vector
+  I=[]; % Total patient index
 
-X=[]; % Total features matrix
-Y=[]; % Total output matrix
-S=[]; % Total sequence vector
-I=[]; % Total patient index
+  % Prepare dirs for features
+  if (~exist(featuresLocation,'dir'))
+    mkdir(featuresLocation);
+  end
 
-% Prepare dirs for features
-for db_idx=1:numel(db_list)
-  if (~exist([db_location,'/',db_list{db_idx},'_features'],'dir'))
-    mkdir([db_location,'/',db_list{db_idx},'_features']);
+  % Run feature calculation
+  for sigIdx=1:numel(signalsWorkList.id)
+    switch signalsWorkList.sigType(sigIdx)
+      case 'aes_spc'
+        calcFeatures_aes_spc(signalsWorkList.mat_address(sigIdx));
+      case 'mat_zhukov'
+        calcFeatures_ch_sleep_kharitonov(propertiesFunction,...
+          signalsWorkList.mat_address(sigIdx)); 
+      otherwise
+        warning(['There are np aproriate method to process signals of ',...
+          'type ',signalsWorkList.sigType(sigIdx),'! Signal with ID = ',...
+          num2str(signalsWorkList.id(sigIdx)),' has been skipped.']);
+    end
   end
 end
-
-% Run feature calculation
-for db_idx=1:numel(db_list)
-  if (strcmp(db_list{db_idx},'aes_spc'))
-    calcFeatures_aes_spc([db_location,'/',db_list{db_idx},'/']);
-%     calcFeatures_aes_spc_kaggleTest([db_location,'/',db_list{db_idx},'/']);
-  elseif (strcmp(db_list{db_idx},'ch_sleep_kharitonov'))
-    calcFeatures_ch_sleep_kharitonov([db_location,'/',db_list{db_idx},'/']);   
-  else
-    warning(['No feature calculation function for ',db_list{db_idx},...
-      ' database!']);
-  end
-end
-

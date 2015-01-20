@@ -5,6 +5,8 @@ session = IEEGSession(sname,'Oleg Panichev',...
   'D:\Google\PhD\key\Ole_ieeglogin.bin')
 session.data
 
+session.data.viewer([1 50000],[1:10])
+
 sz = [579016087 47];
 fs = 5000;
 path = 'D:\eeg_db\ieeg_mat_db\';
