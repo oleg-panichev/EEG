@@ -6,11 +6,6 @@ function calcFeatures(propertiesFunction)
   prepareWorkspace();
   propertiesFunction();
 
-  X=[]; % Total features matrix
-  Y=[]; % Total output matrix
-  S=[]; % Total sequence vector
-  I=[]; % Total patient index
-
   % Prepare dirs for features
   if (~exist(featuresLocation,'dir'))
     mkdir(featuresLocation);
