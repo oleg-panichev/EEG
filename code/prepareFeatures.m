@@ -6,7 +6,7 @@ function [features,fNames,fTimes,fLabels]=prepareFeatures(propertiesFunction,s)
   fIdx=1;
 
   % Calculating features
-  winSize=20; % Seconds
+  winSize=30; % Seconds
   stepSize=winSize/2; % Seconds
   [corrc,corrc_mean,corrc_std,corrc_fLabels,corrc_mean_fLabels,...
     corrc_std_fLabels,tBuf]=f_corrBetweenChannels(s.data,fs,...
@@ -18,6 +18,8 @@ function [features,fNames,fTimes,fLabels]=prepareFeatures(propertiesFunction,s)
   features{fIdx}=corrc_std; fNames{fIdx}=['corrc_std_w',num2str(winSize),'_s',num2str(stepSize)]; 
   fTimes{fIdx}=tBuf; fLabels{fIdx}=corrc_std_fLabels; fIdx=fIdx+1;
   
+%   []=f_MIBetweee...
+    
 %   x=corrc;
 %   save([fLocation,'/',sName,'.mat'],'x');
   

@@ -14,7 +14,7 @@ function calcFeatures_MatZhukov(propertiesFunction,fname,dir2save)
 
   s=struct('data',eegData,'channels',{labels},...
     'sampling_frequency',sdata.Fs,'data_length_sec',(sdata.N/sdata.Fs),...
-    'sequence',0,'szTimes',sdata.seizureStart);
+    'sequence',0,'szTimes',sdata.seizureStart,'crg',sdata.crgInterpolated);
   
   % Calculate all features for signal
   [features,labels,fTimes,fLabels]=prepareFeatures(propertiesFunction,s);

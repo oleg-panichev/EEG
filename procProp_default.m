@@ -12,7 +12,7 @@ ftLocation='D:/eeg_db/features/';
 signalsList=SignalsList([dbLocation,signalsListFname]);
 
 %% Construct list of signals to process
-sigId=[1:9];
+sigId=[4];
 signalsWorkList=signalsList.getSubListById(sigId).getTable; % Get list if signals by ID
 
 %% Flags
