@@ -1,7 +1,7 @@
-function [tBeforeSz,tAfterSz]=convertTimes2tSz(fTimes,szTimes,dataLen)
+function [tBeforeSz,tAfterSz]=convertTimes2tSz(fTimes,szTimes,dataLen,fs)
   tBeforeSz=cell(size(fTimes));
   tAfterSz=cell(size(fTimes));
-  szTimes=[0,szTimes,dataLen+1];
+  szTimes=[0;szTimes*fs;dataLen+1];
   for i=1:numel(fTimes)
     tBeforeSz{i}=fTimes{i};
     tAfterSz{i}=fTimes{i};
@@ -15,8 +15,11 @@ function [tBeforeSz,tAfterSz]=convertTimes2tSz(fTimes,szTimes,dataLen)
 
       [~,idx]=min(tBeforeSz{i}(idx:end));
       idx=idx+szIdxPrev+1;
-      if (idx<
-      tAfterSz{i}(idx-1:end)=tAfterSz{i}(idx-1:end)-szTimes(k)+szIdxPrev;     
+      if (k<numel(szTimes))
+        tAfterSz{i}(idx-1:end)=tAfterSz{i}(idx-1:end)-szTimes(k)+szIdxPrev;     
+      end
     end
+    tBeforeSz{i}=tBeforeSz{i}./fs;
+    tAfterSz{i}=tAfterSz{i}./fs;
   end
 end

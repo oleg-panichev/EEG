@@ -1,5 +1,4 @@
-function [features,labels,fTimes]=prepareFeatures(propertiesFunction,s,sName,...
-    fLocation)
+function [features,fNames,fTimes,fLabels]=prepareFeatures(propertiesFunction,s)
   propertiesFunction();
   fs=s.sampling_frequency;
   chNum=numel(s.channels);
@@ -7,13 +6,17 @@ function [features,labels,fTimes]=prepareFeatures(propertiesFunction,s,sName,...
   fIdx=1;
 
   % Calculating features
-  winSize=30; % Seconds
-  stepSize=15; % Seconds
-  [corrc,corrc_mean,corrc_std,tBuf]=f_corrBetweenChannels(data,fs,...
-    winSize*fs,stepSize*fs);  
-  features{fIdx}=corrc; labels{fIdx}=['corrc_w',num2str(winSize),'_s',num2str(stepSize)]; fTimes{fIdx}=tBuf; fIdx=fIdx+1;
-  features{fIdx}=corrc_mean; labels{fIdx}=['corrc_mean_w',num2str(winSize),'_s',num2str(stepSize)]; fTimes{fIdx}=tBuf; fIdx=fIdx+1;
-  features{fIdx}=corrc_std; labels{fIdx}=['corrc_std_w',num2str(winSize),'_s',num2str(stepSize)]; fTimes{fIdx}=tBuf; fIdx=fIdx+1;
+  winSize=20; % Seconds
+  stepSize=winSize/2; % Seconds
+  [corrc,corrc_mean,corrc_std,corrc_fLabels,corrc_mean_fLabels,...
+    corrc_std_fLabels,tBuf]=f_corrBetweenChannels(s.data,fs,...
+    winSize*fs,stepSize*fs,s.channels);
+  features{fIdx}=corrc; fNames{fIdx}=['corrc_w',num2str(winSize),'_s',num2str(stepSize)]; 
+  fTimes{fIdx}=tBuf; fLabels{fIdx}=corrc_fLabels; fIdx=fIdx+1;
+  features{fIdx}=corrc_mean; fNames{fIdx}=['corrc_mean_w',num2str(winSize),'_s',num2str(stepSize)]; 
+  fTimes{fIdx}=tBuf; fLabels{fIdx}=corrc_mean_fLabels; fIdx=fIdx+1;
+  features{fIdx}=corrc_std; fNames{fIdx}=['corrc_std_w',num2str(winSize),'_s',num2str(stepSize)]; 
+  fTimes{fIdx}=tBuf; fLabels{fIdx}=corrc_std_fLabels; fIdx=fIdx+1;
   
 %   x=corrc;
 %   save([fLocation,'/',sName,'.mat'],'x');

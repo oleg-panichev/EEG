@@ -7,12 +7,12 @@ reportPath='reports/'; % Folder name to store the results
 trainPath='train/';
 testPath='test/';
 
-featuresLocation='D:/eeg_db/features/';
+ftLocation='D:/eeg_db/features/';
 
 signalsList=SignalsList([dbLocation,signalsListFname]);
 
 %% Construct list of signals to process
-sigId=[4];
+sigId=[1:9];
 signalsWorkList=signalsList.getSubListById(sigId).getTable; % Get list if signals by ID
 
 %% Flags
