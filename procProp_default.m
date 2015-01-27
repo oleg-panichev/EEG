@@ -8,12 +8,16 @@ trainPath='train/';
 testPath='test/';
 
 ftLocation='D:/eeg_db/features/';
+repLocation='D:/eeg_db/reports/';
 
 signalsList=SignalsList([dbLocation,signalsListFname]);
 
 %% Construct list of signals to process
 sigId=[4];
 signalsWorkList=signalsList.getSubListById(sigId).getTable; % Get list if signals by ID
+
+%% Features list to use in classification
+fList={'corrc_w30_s15'};
 
 %% Flags
 runOnTestDataFlag=0; % Flag to run features extraction on test data (like Kaggle)
