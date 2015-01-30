@@ -13,7 +13,7 @@ repLocation='D:/eeg_db/reports/';
 signalsList=SignalsList([dbLocation,signalsListFname]);
 
 %% Construct list of signals to process
-sigId=[4];
+sigId=[2,4];
 signalsWorkList=signalsList.getSubListById(sigId).getTable; % Get list if signals by ID
 
 %% Features list to use in classification
