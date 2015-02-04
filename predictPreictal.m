@@ -1,6 +1,7 @@
 function predictPreictal(propertiesFunction)
   addpath('calcFeatures');
   addpath('classes');
+  addpath('classifiers');
   addpath('code');
   addpath('plot');
   prepareWorkspace();
@@ -44,6 +45,7 @@ function predictPreictal(propertiesFunction)
   X=[];
   tBeforeSz=[];
   tAfterSz=[];
+  PID=[];
   for sigIdx=1:numel(signalsWorkList.id)
     tic;
     disp(signalsWorkList.mat_address{sigIdx});
@@ -57,6 +59,7 @@ function predictPreictal(propertiesFunction)
           X=[X;s.x(:,fIdxMatrices{fIdx}(sigIdx,:))];
           tBeforeSz=[tBeforeSz,s.tBeforeSz];
           tAfterSz=[tAfterSz,s.tAfterSz];
+          PID=[PID,ones(size(tBeforeSz))*signalsWorkList.id{sigIdx}];
         end
       otherwise
         warning(['There are np aproriate method to process signals of ',...
@@ -76,10 +79,15 @@ function predictPreictal(propertiesFunction)
   tbsz=tBeforeSz(yIdx);
   tasz=tAfterSz(yIdx);
   X=X(yIdx,:);
+  PID=PID(yIdx);
   Y=tbsz<600;
   
   size(X)
   size(Y)
   
-  % Run classification
+%   % Run classification
+%   for classIdx=1:numel(classifierNames)
+%     results=runClassification(propertiesFunction,X,Y,classifierNames{classIdx});
+%   end
+  
 end

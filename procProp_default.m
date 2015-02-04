@@ -19,6 +19,9 @@ signalsWorkList=signalsList.getSubListById(sigId).getTable; % Get list if signal
 %% Features list to use in classification
 fList={'corrc_w30_s15'};
 
+%% Classifiers list to use in classification
+classifierNames={'nbayes','logit','svm','tree','knn','discr'};
+
 %% Flags
 runOnTestDataFlag=0; % Flag to run features extraction on test data (like Kaggle)
 clResultNumber=1;
