@@ -82,12 +82,12 @@ function predictPreictal(propertiesFunction)
   PID=PID(yIdx);
   Y=tbsz<600;
   
-  size(X)
-  size(Y)
+  % Run classification
+  results=cell(numel(classifierNames),1);
+  for classIdx=1:numel(classifierNames)
+    results{classIdx}=runClassification(propertiesFunction,X,Y,classifierNames{classIdx});
+  end
   
-%   % Run classification
-%   for classIdx=1:numel(classifierNames)
-%     results=runClassification(propertiesFunction,X,Y,classifierNames{classIdx});
-%   end
+  % Save results to report tables
   
 end
