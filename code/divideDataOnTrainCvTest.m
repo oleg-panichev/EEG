@@ -1,18 +1,18 @@
-function [X_tr,X_cv,X_ts,Y_tr,Y_cv,Y_ts,PID_tr,PID_cv,PID_ts]=divideDataOnTrainCvTest(X,Y,PID)  
-  
+function [X_tr,X_cv,X_ts,Y_tr,Y_cv,Y_ts,SID_tr,SID_cv,SID_ts]=divideDataOnTrainCvTest(X,Y,SID)  
+
   IDX_POS=(Y==1);
   IDX_NEG=(Y==0);
   N=numel(Y);
-  N_POS=numel(IDX_POS);
-  N_NEG=numel(IDX_NEG);
+  N_POS=sum(IDX_POS);
+  N_NEG=sum(IDX_NEG);
   
   % Divide data on two classes
   X_POS=X(IDX_POS,:);
   X_NEG=X(IDX_NEG,:);
   Y_POS=Y(IDX_POS);
   Y_NEG=Y(IDX_NEG);
-  PID_POS=PID(IDX_POS);
-  PID_NEG=PID(IDX_NEG);
+  SID_POS=SID(IDX_POS);
+  SID_NEG=SID(IDX_NEG);
   
   % Form random data permutation
   rIdx_POS=randperm(N_POS);
@@ -35,17 +35,17 @@ function [X_tr,X_cv,X_ts,Y_tr,Y_cv,Y_ts,PID_tr,PID_cv,PID_ts]=divideDataOnTrainC
   rIdx_ts_NEG=rIdx_NEG(N_cv_NEG+1:end);
   
   % Train Set
-  X_tr=[X_POS(rIdx_tr_POS);X_NEG(rIdx_tr_NEG)];
+  X_tr=[X_POS(rIdx_tr_POS,:);X_NEG(rIdx_tr_NEG,:)];
   Y_tr=[Y_POS(rIdx_tr_POS);Y_NEG(rIdx_tr_NEG)];
-  PID_tr=[PID_POS(rIdx_tr_POS);PID_NEG(rIdx_tr_NEG)];
+  SID_tr=[SID_POS(rIdx_tr_POS);SID_NEG(rIdx_tr_NEG)];
   
   % Cross Validation Set
-  X_cv=[X_POS(rIdx_cv_POS);X_NEG(rIdx_cv_NEG)];
+  X_cv=[X_POS(rIdx_cv_POS,:);X_NEG(rIdx_cv_NEG,:)];
   Y_cv=[Y_POS(rIdx_cv_POS);Y_NEG(rIdx_cv_NEG)];
-  PID_cv=[PID_POS(rIdx_cv_POS);PID_NEG(rIdx_cv_NEG)];
+  SID_cv=[SID_POS(rIdx_cv_POS);SID_NEG(rIdx_cv_NEG)];
   
   % Test Set
-  X_ts=[X_POS(rIdx_ts_POS);X_NEG(rIdx_ts_NEG)];
+  X_ts=[X_POS(rIdx_ts_POS,:);X_NEG(rIdx_ts_NEG,:)];
   Y_ts=[Y_POS(rIdx_ts_POS);Y_NEG(rIdx_ts_NEG)];
-  PID_ts=[PID_POS(rIdx_ts_POS);PID_NEG(rIdx_ts_NEG)];
+  SID_ts=[SID_POS(rIdx_ts_POS);SID_NEG(rIdx_ts_NEG)];
 end

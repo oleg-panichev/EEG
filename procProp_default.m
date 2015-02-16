@@ -30,3 +30,7 @@ clResultNumber=1;
 nOfIterations=100; % Number of iterations of classification
 trainNumCoef=0.6; % Percent of db, which is used to train
 nOfThresholds=500;
+
+earlyDetection=5; % Seconds
+afterSzStart=120; % Seconds
+preictalTime=600; % Seconds

@@ -1,4 +1,4 @@
-function S=runNonPatSpecificClassification(propertiesFunction,X,Y,classifierName)
+function S=runNonPatSpecificClassification(propertiesFunction,X,Y,SID,classifierName)
   propertiesFunction();
   
   % Train set results
@@ -93,546 +93,155 @@ function S=runNonPatSpecificClassification(propertiesFunction,X,Y,classifierName
   
   for iteration=1:nOfIterations
     % Split data on train, cv and test sets
-    [X_tr,X_cv,X_ts,Y_tr,Y_cv,Y_ts,PID_tr,PID_cv,PID_ts]=...
-      divideDataOnTrainCvTest(X,Y,PID);
+    [X_tr,X_cv,X_ts,Y_tr,Y_cv,Y_ts,~,~,~]=...
+      divideDataOnTrainCvTest(X,Y,SID);
     
+    % Train model
     if (strcmpi(classifierName,'nbayes'))      
-      % Train model
       mdl=fitNaiveBayes(X_tr,Y_tr);
       p=posterior(mdl,X_tr);
-      p=p(:,2);
-      
+      p=p(:,2);     
       [T]=getThresholds([0 1],nOfThresholds);
-      
-      % Performance curves on train data
-      [TP_th_tr(:,iteration),TN_th_tr(:,iteration),FP_th_tr(:,iteration),FN_th_tr(:,iteration),...
-        ACC_th_tr(:,iteration),PPV_th_tr(:,iteration),TPR_th_tr(:,iteration),SPC_th_tr(:,iteration),...
-        FPR_th_tr(:,iteration),F1_th_tr(:,iteration),SS_th_tr(:,iteration),AUC_tr(iteration)]=...
-        perfCurvesTh(Y_tr,p,T,1);
-      
-      % Interpolating FRP to average ROCs
-      FPR_ROC_tr(:,iteration)=0:1/(nOfThresholds-1):1;
-      [fpr,idxSort]=sort(FPR_tr(:,iteration));
-      tpr=TPR_tr(idxSort,iteration);
-      TPR_ROC_tr(:,iteration)=interp1q(fpr,tpr,FPR_ROC_tr);
-      
-      % Selecting optimal threshold based on SS-score
-      [~,optIdx]=max(SS_tr(:,iteration));
-      TH_tr(iteration)=T(optIdx);
-      
-      % Reluts with optimal threshold
-%       RSLT_tr=predict(mdl,X_tr);
-      RSLT_tr=p>T(optIdx);
-      
-      % Results for train set with optimal threshold
-      [TP_tr(iteration),TN_tr(iteration),FP_tr(iteration),FN_tr(iteration),...
-        ACC_tr(iteration),PPV_tr(iteration),TPR_tr(iteration),SPC_tr(iteration),...
-        FPR_tr(iteration),F1_tr(iteration),SS_tr(iteration)]=estBinClass(Y_tr,RSLT_tr);
-      
-      % Obtaining results for CV set
-      p=posterior(mdl,X_cv);
-      p=p(:,2);
-      
-      % Performance curves on CV data
-      [TP_th_cv(:,iteration),TN_th_cv(:,iteration),FP_th_cv(:,iteration),FN_th_cv(:,iteration),...
-        ACC_th_cv(:,iteration),PPV_th_cv(:,iteration),TPR_th_cv(:,iteration),SPC_th_cv(:,iteration),...
-        FPR_th_cv(:,iteration),F1_th_cv(:,iteration),SS_th_cv(:,iteration),AUC_cv(iteration)]=...
-        perfCurvesTh(Y_cv,p,T,1);
-      
-      % Interpolating FRP to average ROCs
-      FPR_ROC_cv(:,iteration)=0:1/(nOfThresholds-1):1;
-      [fpr,idxSort]=sort(FPR_cv(:,iteration));
-      tpr=TPR_cv(idxSort,iteration);
-      TPR_ROC_cv(:,iteration)=interp1q(fpr,tpr,FPR_ROC_cv(:,iteration));
-      
-      % Selecting optimal threshold based on SS-score
-      [~,optIdx]=max(SS_cv(:,iteration));
-      TH_cv(iteration)=T(optIdx);
-      
-      % Reluts with optimal threshold
-%       RSLT_cv=predict(mdl,X_cv);
-      RSLT_cv=p>T(optIdx);
-      
-      % Results for CV set with optimal threshold
-      [TP_cv(iteration),TN_cv(iteration),FP_cv(iteration),FN_cv(iteration),...
-        ACC_cv(iteration),PPV_cv(iteration),TPR_cv(iteration),SPC_cv(iteration),...
-        FPR_cv(iteration),F1_cv(iteration),SS_cv(iteration)]=estBinClass(Y_cv,RSLT_cv);
-
-      % Obtaining results for Test set
-      p=posterior(mdl,X_ts);
-      p=p(:,2);
-      
-      % Performance curves on train data
-      [TP_th_ts(:,iteration),TN_th_ts(:,iteration),FP_th_ts(:,iteration),FN_th_ts(:,iteration),...
-        ACC_th_ts(:,iteration),PPV_th_ts(:,iteration),TPR_th_ts(:,iteration),SPC_th_ts(:,iteration),...
-        FPR_th_ts(:,iteration),F1_th_ts(:,iteration),SS_th_ts(:,iteration),AUC_ts(iteration)]=...
-        perfCurvesTh(Y_ts,p,T,1);
-      
-      % Interpolating FRP to average ROCs
-      FPR_ROC_ts(:,iteration)=0:1/(nOfThresholds-1):1;
-      [fpr,idxSort]=sort(FPR_ts(:,iteration));
-      tpr=TPR_ts(idxSort,iteration);
-      TPR_ROC_ts(:,iteration)=interp1q(fpr,tpr,FPR_ROC_ts(:,iteration));
-      
-      % Selecting optimal threshold based on SS-score
-      [~,optIdx]=max(SS_ts(:,iteration));
-      TH_ts(iteration)=T(optIdx);
-      
-      % Reluts with optimal threshold
-%       RSLT_ts=predict(mdl,X_ts);
-      RSLT_ts=p>T(optIdx);
-
-      % Results for CV set with optimal threshold
-      [TP_ts(iteration),TN_ts(iteration),FP_ts(iteration),FN_ts(iteration),...
-        ACC_ts(iteration),PPV_ts(iteration),TPR_ts(iteration),SPC_ts(iteration),...
-        FPR_ts(iteration),F1_ts(iteration),SS_ts(iteration)]=estBinClass(Y_ts,RSLT_ts);
     elseif (strcmpi(classifierName,'logit'))
-      % Train model
       mdl=fitglm(X_tr,Y_tr,'Distribution','binomial');
-      p=predict(mdl,X_tr);
-      
+      p=predict(mdl,X_tr);      
       [T]=getThresholds([0 1],nOfThresholds);
-      
-      % Performance curves on train data
-      [TP_th_tr(:,iteration),TN_th_tr(:,iteration),FP_th_tr(:,iteration),FN_th_tr(:,iteration),...
-        ACC_th_tr(:,iteration),PPV_th_tr(:,iteration),TPR_th_tr(:,iteration),SPC_th_tr(:,iteration),...
-        FPR_th_tr(:,iteration),F1_th_tr(:,iteration),SS_th_tr(:,iteration),AUC_tr(iteration)]=...
-        perfCurvesTh(Y_tr,p,T,1);
-      
-      % Interpolating FRP to average ROCs
-      FPR_ROC_tr(:,iteration)=0:1/(nOfThresholds-1):1;
-      [fpr,idxSort]=sort(FPR_tr(:,iteration));
-      tpr=TPR_tr(idxSort,iteration);
-      TPR_ROC_tr(:,iteration)=interp1q(fpr,tpr,FPR_ROC_tr);
-      
-      % Selecting optimal threshold based on SS-score
-      [~,optIdx]=max(SS_tr(:,iteration));
-      TH_tr(iteration)=T(optIdx);
-      
-      % Reluts with optimal threshold
-      RSLT_tr=p>T(optIdx);
-      
-      % Results for train set with optimal threshold
-      [TP_tr(iteration),TN_tr(iteration),FP_tr(iteration),FN_tr(iteration),...
-        ACC_tr(iteration),PPV_tr(iteration),TPR_tr(iteration),SPC_tr(iteration),...
-        FPR_tr(iteration),F1_tr(iteration),SS_tr(iteration)]=estBinClass(Y_tr,RSLT_tr);
-      
-      % Obtaining results for CV set
-      p=predict(mdl,X_cv);
-      
-      % Performance curves on CV data
-      [TP_th_cv(:,iteration),TN_th_cv(:,iteration),FP_th_cv(:,iteration),FN_th_cv(:,iteration),...
-        ACC_th_cv(:,iteration),PPV_th_cv(:,iteration),TPR_th_cv(:,iteration),SPC_th_cv(:,iteration),...
-        FPR_th_cv(:,iteration),F1_th_cv(:,iteration),SS_th_cv(:,iteration),AUC_cv(iteration)]=...
-        perfCurvesTh(Y_cv,p,T,1);
-      
-      % Interpolating FRP to average ROCs
-      FPR_ROC_cv(:,iteration)=0:1/(nOfThresholds-1):1;
-      [fpr,idxSort]=sort(FPR_cv(:,iteration));
-      tpr=TPR_cv(idxSort,iteration);
-      TPR_ROC_cv(:,iteration)=interp1q(fpr,tpr,FPR_ROC_cv(:,iteration));
-      
-      % Selecting optimal threshold based on SS-score
-      [~,optIdx]=max(SS_cv(:,iteration));
-      TH_cv(iteration)=T(optIdx);
-      
-      % Reluts with optimal threshold
-      RSLT_cv=p>T(optIdx);
-      
-      % Results for CV set with optimal threshold
-      [TP_cv(iteration),TN_cv(iteration),FP_cv(iteration),FN_cv(iteration),...
-        ACC_cv(iteration),PPV_cv(iteration),TPR_cv(iteration),SPC_cv(iteration),...
-        FPR_cv(iteration),F1_cv(iteration),SS_cv(iteration)]=estBinClass(Y_cv,RSLT_cv);
-
-      % Obtaining results for Test set
-      p=predict(mdl,X_ts);
-      
-      % Performance curves on train data
-      [TP_th_ts(:,iteration),TN_th_ts(:,iteration),FP_th_ts(:,iteration),FN_th_ts(:,iteration),...
-        ACC_th_ts(:,iteration),PPV_th_ts(:,iteration),TPR_th_ts(:,iteration),SPC_th_ts(:,iteration),...
-        FPR_th_ts(:,iteration),F1_th_ts(:,iteration),SS_th_ts(:,iteration),AUC_ts(iteration)]=...
-        perfCurvesTh(Y_ts,p,T,1);
-      
-      % Interpolating FRP to average ROCs
-      FPR_ROC_ts(:,iteration)=0:1/(nOfThresholds-1):1;
-      [fpr,idxSort]=sort(FPR_ts(:,iteration));
-      tpr=TPR_ts(idxSort,iteration);
-      TPR_ROC_ts(:,iteration)=interp1q(fpr,tpr,FPR_ROC_ts(:,iteration));
-      
-      % Selecting optimal threshold based on SS-score
-      [~,optIdx]=max(SS_ts(:,iteration));
-      TH_ts(iteration)=T(optIdx);
-      
-      % Reluts with optimal threshold
-      RSLT_ts=p>T(optIdx);
-
-      % Results for CV set with optimal threshold
-      [TP_ts(iteration),TN_ts(iteration),FP_ts(iteration),FN_ts(iteration),...
-        ACC_ts(iteration),PPV_ts(iteration),TPR_ts(iteration),SPC_ts(iteration),...
-        FPR_ts(iteration),F1_ts(iteration),SS_ts(iteration)]=estBinClass(Y_ts,RSLT_ts);
     elseif (strcmpi(classifierName,'svm'))
-      % Train model
       mdl=fitcsvm(X_tr,Y_tr);
       [~,p]=predict(mdl,X_tr);
-      p=p(:,2);
-      
+      p=p(:,2);      
       [T]=getThresholds(p,nOfThresholds);
-      
-      % Performance curves on train data
-      [TP_th_tr(:,iteration),TN_th_tr(:,iteration),FP_th_tr(:,iteration),FN_th_tr(:,iteration),...
-        ACC_th_tr(:,iteration),PPV_th_tr(:,iteration),TPR_th_tr(:,iteration),SPC_th_tr(:,iteration),...
-        FPR_th_tr(:,iteration),F1_th_tr(:,iteration),SS_th_tr(:,iteration),AUC_tr(iteration)]=...
-        perfCurvesTh(Y_tr,p,T,1);
-      
-      % Interpolating FRP to average ROCs
-      FPR_ROC_tr(:,iteration)=0:1/(nOfThresholds-1):1;
-      [fpr,idxSort]=sort(FPR_tr(:,iteration));
-      tpr=TPR_tr(idxSort,iteration);
-      TPR_ROC_tr(:,iteration)=interp1q(fpr,tpr,FPR_ROC_tr);
-      
-      % Selecting optimal threshold based on SS-score
-      [~,optIdx]=max(SS_tr(:,iteration));
-      TH_tr(iteration)=T(optIdx);
-      
-      % Reluts with optimal threshold
-%       RSLT_tr=predict(mdl,X_tr);
-      RSLT_tr=p>T(optIdx);
-      
-      % Results for train set with optimal threshold
-      [TP_tr(iteration),TN_tr(iteration),FP_tr(iteration),FN_tr(iteration),...
-        ACC_tr(iteration),PPV_tr(iteration),TPR_tr(iteration),SPC_tr(iteration),...
-        FPR_tr(iteration),F1_tr(iteration),SS_tr(iteration)]=estBinClass(Y_tr,RSLT_tr);
-      
-      % Obtaining results for CV set
-      [~,p]=predict(mdl,X_cv);
-      p=p(:,2);
-      
-      % Performance curves on CV data
-      [TP_th_cv(:,iteration),TN_th_cv(:,iteration),FP_th_cv(:,iteration),FN_th_cv(:,iteration),...
-        ACC_th_cv(:,iteration),PPV_th_cv(:,iteration),TPR_th_cv(:,iteration),SPC_th_cv(:,iteration),...
-        FPR_th_cv(:,iteration),F1_th_cv(:,iteration),SS_th_cv(:,iteration),AUC_cv(iteration)]=...
-        perfCurvesTh(Y_cv,p,T,1);
-      
-      % Interpolating FRP to average ROCs
-      FPR_ROC_cv(:,iteration)=0:1/(nOfThresholds-1):1;
-      [fpr,idxSort]=sort(FPR_cv(:,iteration));
-      tpr=TPR_cv(idxSort,iteration);
-      TPR_ROC_cv(:,iteration)=interp1q(fpr,tpr,FPR_ROC_cv(:,iteration));
-      
-      % Selecting optimal threshold based on SS-score
-      [~,optIdx]=max(SS_cv(:,iteration));
-      TH_cv(iteration)=T(optIdx);
-      
-      % Reluts with optimal threshold
-%       RSLT_cv=predict(mdl,X_cv);
-      RSLT_cv=p>T(optIdx);
-      
-      % Results for CV set with optimal threshold
-      [TP_cv(iteration),TN_cv(iteration),FP_cv(iteration),FN_cv(iteration),...
-        ACC_cv(iteration),PPV_cv(iteration),TPR_cv(iteration),SPC_cv(iteration),...
-        FPR_cv(iteration),F1_cv(iteration),SS_cv(iteration)]=estBinClass(Y_cv,RSLT_cv);
-
-      % Obtaining results for Test set
-      [~,p]=predict(mdl,X_ts);
-      p=p(:,2);
-      
-      % Performance curves on train data
-      [TP_th_ts(:,iteration),TN_th_ts(:,iteration),FP_th_ts(:,iteration),FN_th_ts(:,iteration),...
-        ACC_th_ts(:,iteration),PPV_th_ts(:,iteration),TPR_th_ts(:,iteration),SPC_th_ts(:,iteration),...
-        FPR_th_ts(:,iteration),F1_th_ts(:,iteration),SS_th_ts(:,iteration),AUC_ts(iteration)]=...
-        perfCurvesTh(Y_ts,p,T,1);
-      
-      % Interpolating FRP to average ROCs
-      FPR_ROC_ts(:,iteration)=0:1/(nOfThresholds-1):1;
-      [fpr,idxSort]=sort(FPR_ts(:,iteration));
-      tpr=TPR_ts(idxSort,iteration);
-      TPR_ROC_ts(:,iteration)=interp1q(fpr,tpr,FPR_ROC_ts(:,iteration));
-      
-      % Selecting optimal threshold based on SS-score
-      [~,optIdx]=max(SS_ts(:,iteration));
-      TH_ts(iteration)=T(optIdx);
-      
-      % Reluts with optimal threshold
-%       RSLT_ts=predict(mdl,X_ts);
-      RSLT_ts=p>T(optIdx);
-
-      % Results for CV set with optimal threshold
-      [TP_ts(iteration),TN_ts(iteration),FP_ts(iteration),FN_ts(iteration),...
-        ACC_ts(iteration),PPV_ts(iteration),TPR_ts(iteration),SPC_ts(iteration),...
-        FPR_ts(iteration),F1_ts(iteration),SS_ts(iteration)]=estBinClass(Y_ts,RSLT_ts);
     elseif (strcmpi(classifierName,'tree'))
-      % Train model
       mdl=fitctree(X_tr,Y_tr);
       [~,p]=predict(mdl,X_tr);
-      p=p(:,2);
-      
+      p=p(:,2);      
       [T]=getThresholds([0 1],nOfThresholds);
-      
-      % Performance curves on train data
-      [TP_th_tr(:,iteration),TN_th_tr(:,iteration),FP_th_tr(:,iteration),FN_th_tr(:,iteration),...
-        ACC_th_tr(:,iteration),PPV_th_tr(:,iteration),TPR_th_tr(:,iteration),SPC_th_tr(:,iteration),...
-        FPR_th_tr(:,iteration),F1_th_tr(:,iteration),SS_th_tr(:,iteration),AUC_tr(iteration)]=...
-        perfCurvesTh(Y_tr,p,T,1);
-      
-      % Interpolating FRP to average ROCs
-      FPR_ROC_tr(:,iteration)=0:1/(nOfThresholds-1):1;
-      [fpr,idxSort]=sort(FPR_tr(:,iteration));
-      tpr=TPR_tr(idxSort,iteration);
-      TPR_ROC_tr(:,iteration)=interp1q(fpr,tpr,FPR_ROC_tr);
-      
-      % Selecting optimal threshold based on SS-score
-      [~,optIdx]=max(SS_tr(:,iteration));
-      TH_tr(iteration)=T(optIdx);
-      
-      % Reluts with optimal threshold
-%       RSLT_tr=predict(mdl,X_tr);
-      RSLT_tr=p>T(optIdx);
-      
-      % Results for train set with optimal threshold
-      [TP_tr(iteration),TN_tr(iteration),FP_tr(iteration),FN_tr(iteration),...
-        ACC_tr(iteration),PPV_tr(iteration),TPR_tr(iteration),SPC_tr(iteration),...
-        FPR_tr(iteration),F1_tr(iteration),SS_tr(iteration)]=estBinClass(Y_tr,RSLT_tr);
-      
-      % Obtaining results for CV set
-      [~,p]=predict(mdl,X_cv);
-      p=p(:,2);
-      
-      % Performance curves on CV data
-      [TP_th_cv(:,iteration),TN_th_cv(:,iteration),FP_th_cv(:,iteration),FN_th_cv(:,iteration),...
-        ACC_th_cv(:,iteration),PPV_th_cv(:,iteration),TPR_th_cv(:,iteration),SPC_th_cv(:,iteration),...
-        FPR_th_cv(:,iteration),F1_th_cv(:,iteration),SS_th_cv(:,iteration),AUC_cv(iteration)]=...
-        perfCurvesTh(Y_cv,p,T,1);
-      
-      % Interpolating FRP to average ROCs
-      FPR_ROC_cv(:,iteration)=0:1/(nOfThresholds-1):1;
-      [fpr,idxSort]=sort(FPR_cv(:,iteration));
-      tpr=TPR_cv(idxSort,iteration);
-      TPR_ROC_cv(:,iteration)=interp1q(fpr,tpr,FPR_ROC_cv(:,iteration));
-      
-      % Selecting optimal threshold based on SS-score
-      [~,optIdx]=max(SS_cv(:,iteration));
-      TH_cv(iteration)=T(optIdx);
-      
-      % Reluts with optimal threshold
-%       RSLT_cv=predict(mdl,X_cv);
-      RSLT_cv=p>T(optIdx);
-      
-      % Results for CV set with optimal threshold
-      [TP_cv(iteration),TN_cv(iteration),FP_cv(iteration),FN_cv(iteration),...
-        ACC_cv(iteration),PPV_cv(iteration),TPR_cv(iteration),SPC_cv(iteration),...
-        FPR_cv(iteration),F1_cv(iteration),SS_cv(iteration)]=estBinClass(Y_cv,RSLT_cv);
-
-      % Obtaining results for Test set
-      [~,p]=predict(mdl,X_ts);
-      p=p(:,2);
-      
-      % Performance curves on train data
-      [TP_th_ts(:,iteration),TN_th_ts(:,iteration),FP_th_ts(:,iteration),FN_th_ts(:,iteration),...
-        ACC_th_ts(:,iteration),PPV_th_ts(:,iteration),TPR_th_ts(:,iteration),SPC_th_ts(:,iteration),...
-        FPR_th_ts(:,iteration),F1_th_ts(:,iteration),SS_th_ts(:,iteration),AUC_ts(iteration)]=...
-        perfCurvesTh(Y_ts,p,T,1);
-      
-      % Interpolating FRP to average ROCs
-      FPR_ROC_ts(:,iteration)=0:1/(nOfThresholds-1):1;
-      [fpr,idxSort]=sort(FPR_ts(:,iteration));
-      tpr=TPR_ts(idxSort,iteration);
-      TPR_ROC_ts(:,iteration)=interp1q(fpr,tpr,FPR_ROC_ts(:,iteration));
-      
-      % Selecting optimal threshold based on SS-score
-      [~,optIdx]=max(SS_ts(:,iteration));
-      TH_ts(iteration)=T(optIdx);
-      
-      % Reluts with optimal threshold
-%       RSLT_ts=predict(mdl,X_ts);
-      RSLT_ts=p>T(optIdx);
-
-      % Results for CV set with optimal threshold
-      [TP_ts(iteration),TN_ts(iteration),FP_ts(iteration),FN_ts(iteration),...
-        ACC_ts(iteration),PPV_ts(iteration),TPR_ts(iteration),SPC_ts(iteration),...
-        FPR_ts(iteration),F1_ts(iteration),SS_ts(iteration)]=estBinClass(Y_ts,RSLT_ts);
     elseif (strcmpi(classifierName,'knn'))
-      % Train model
       mdl=fitcknn(X_tr,Y_tr);
       [~,p]=predict(mdl,X_tr);
       p=p(:,2);
-      
       [T]=getThresholds(p,nOfThresholds);
-      
-      % Performance curves on train data
-      [TP_th_tr(:,iteration),TN_th_tr(:,iteration),FP_th_tr(:,iteration),FN_th_tr(:,iteration),...
-        ACC_th_tr(:,iteration),PPV_th_tr(:,iteration),TPR_th_tr(:,iteration),SPC_th_tr(:,iteration),...
-        FPR_th_tr(:,iteration),F1_th_tr(:,iteration),SS_th_tr(:,iteration),AUC_tr(iteration)]=...
-        perfCurvesTh(Y_tr,p,T,1);
-      
-      % Interpolating FRP to average ROCs
-      FPR_ROC_tr(:,iteration)=0:1/(nOfThresholds-1):1;
-      [fpr,idxSort]=sort(FPR_tr(:,iteration));
-      tpr=TPR_tr(idxSort,iteration);
-      TPR_ROC_tr(:,iteration)=interp1q(fpr,tpr,FPR_ROC_tr);
-      
-      % Selecting optimal threshold based on SS-score
-      [~,optIdx]=max(SS_tr(:,iteration));
-      TH_tr(iteration)=T(optIdx);
-      
-      % Reluts with optimal threshold
-%       RSLT_tr=predict(mdl,X_tr);
-      RSLT_tr=p>T(optIdx);
-      
-      % Results for train set with optimal threshold
-      [TP_tr(iteration),TN_tr(iteration),FP_tr(iteration),FN_tr(iteration),...
-        ACC_tr(iteration),PPV_tr(iteration),TPR_tr(iteration),SPC_tr(iteration),...
-        FPR_tr(iteration),F1_tr(iteration),SS_tr(iteration)]=estBinClass(Y_tr,RSLT_tr);
-      
-      % Obtaining results for CV set
-      [~,p]=predict(mdl,X_cv);
-      p=p(:,2);
-      
-      % Performance curves on CV data
-      [TP_th_cv(:,iteration),TN_th_cv(:,iteration),FP_th_cv(:,iteration),FN_th_cv(:,iteration),...
-        ACC_th_cv(:,iteration),PPV_th_cv(:,iteration),TPR_th_cv(:,iteration),SPC_th_cv(:,iteration),...
-        FPR_th_cv(:,iteration),F1_th_cv(:,iteration),SS_th_cv(:,iteration),AUC_cv(iteration)]=...
-        perfCurvesTh(Y_cv,p,T,1);
-      
-      % Interpolating FRP to average ROCs
-      FPR_ROC_cv(:,iteration)=0:1/(nOfThresholds-1):1;
-      [fpr,idxSort]=sort(FPR_cv(:,iteration));
-      tpr=TPR_cv(idxSort,iteration);
-      TPR_ROC_cv(:,iteration)=interp1q(fpr,tpr,FPR_ROC_cv(:,iteration));
-      
-      % Selecting optimal threshold based on SS-score
-      [~,optIdx]=max(SS_cv(:,iteration));
-      TH_cv(iteration)=T(optIdx);
-      
-      % Reluts with optimal threshold
-%       RSLT_cv=predict(mdl,X_cv);
-      RSLT_cv=p>T(optIdx);
-      
-      % Results for CV set with optimal threshold
-      [TP_cv(iteration),TN_cv(iteration),FP_cv(iteration),FN_cv(iteration),...
-        ACC_cv(iteration),PPV_cv(iteration),TPR_cv(iteration),SPC_cv(iteration),...
-        FPR_cv(iteration),F1_cv(iteration),SS_cv(iteration)]=estBinClass(Y_cv,RSLT_cv);
-
-      % Obtaining results for Test set
-      [~,p]=predict(mdl,X_ts);
-      p=p(:,2);
-      
-      % Performance curves on train data
-      [TP_th_ts(:,iteration),TN_th_ts(:,iteration),FP_th_ts(:,iteration),FN_th_ts(:,iteration),...
-        ACC_th_ts(:,iteration),PPV_th_ts(:,iteration),TPR_th_ts(:,iteration),SPC_th_ts(:,iteration),...
-        FPR_th_ts(:,iteration),F1_th_ts(:,iteration),SS_th_ts(:,iteration),AUC_ts(iteration)]=...
-        perfCurvesTh(Y_ts,p,T,1);
-      
-      % Interpolating FRP to average ROCs
-      FPR_ROC_ts(:,iteration)=0:1/(nOfThresholds-1):1;
-      [fpr,idxSort]=sort(FPR_ts(:,iteration));
-      tpr=TPR_ts(idxSort,iteration);
-      TPR_ROC_ts(:,iteration)=interp1q(fpr,tpr,FPR_ROC_ts(:,iteration));
-      
-      % Selecting optimal threshold based on SS-score
-      [~,optIdx]=max(SS_ts(:,iteration));
-      TH_ts(iteration)=T(optIdx);
-      
-      % Reluts with optimal threshold
-%       RSLT_ts=predict(mdl,X_ts);
-      RSLT_ts=p>T(optIdx);
-
-      % Results for CV set with optimal threshold
-      [TP_ts(iteration),TN_ts(iteration),FP_ts(iteration),FN_ts(iteration),...
-        ACC_ts(iteration),PPV_ts(iteration),TPR_ts(iteration),SPC_ts(iteration),...
-        FPR_ts(iteration),F1_ts(iteration),SS_ts(iteration)]=estBinClass(Y_ts,RSLT_ts);
     elseif (strcmpi(classifierName,'discr'))
-      % Train model
       mdl=fitcdiscr(X_tr,Y_tr);
       [~,p]=predict(mdl,X_tr);
-      p=p(:,2);
-      
+      p=p(:,2);      
       [T]=getThresholds([0 1],nOfThresholds);
+    end
       
-      % Performance curves on train data
-      [TP_th_tr(:,iteration),TN_th_tr(:,iteration),FP_th_tr(:,iteration),FN_th_tr(:,iteration),...
-        ACC_th_tr(:,iteration),PPV_th_tr(:,iteration),TPR_th_tr(:,iteration),SPC_th_tr(:,iteration),...
-        FPR_th_tr(:,iteration),F1_th_tr(:,iteration),SS_th_tr(:,iteration),AUC_tr(iteration)]=...
-        perfCurvesTh(Y_tr,p,T,1);
+    % Performance curves on train data
+    [TP_th_tr(:,iteration),TN_th_tr(:,iteration),FP_th_tr(:,iteration),FN_th_tr(:,iteration),...
+      ACC_th_tr(:,iteration),PPV_th_tr(:,iteration),TPR_th_tr(:,iteration),SPC_th_tr(:,iteration),...
+      FPR_th_tr(:,iteration),F1_th_tr(:,iteration),SS_th_tr(:,iteration),AUC_tr(iteration)]=...
+      perfCurvesTh(Y_tr,p,T,1);
       
-      % Interpolating FRP to average ROCs
-      FPR_ROC_tr(:,iteration)=0:1/(nOfThresholds-1):1;
-      [fpr,idxSort]=sort(FPR_tr(:,iteration));
-      tpr=TPR_tr(idxSort,iteration);
-      TPR_ROC_tr(:,iteration)=interp1q(fpr,tpr,FPR_ROC_tr);
+    % Interpolating FRP to average ROCs
+    FPR_ROC_tr(:,iteration)=0:1/(nOfThresholds-1):1;
+    [fpr,idxSort]=sort(FPR_th_tr(:,iteration));
+    tpr=TPR_th_tr(idxSort,iteration);
+    TPR_ROC_tr(:,iteration)=interp1q(fpr,tpr,FPR_ROC_tr(:,iteration));
       
-      % Selecting optimal threshold based on SS-score
-      [~,optIdx]=max(SS_tr(:,iteration));
-      TH_tr(iteration)=T(optIdx);
+    % Selecting optimal threshold based on SS-score
+    [~,optIdx]=max(SS_tr(:,iteration));
+    TH_tr(iteration)=T(optIdx);
       
-      % Reluts with optimal threshold
-%       RSLT_tr=predict(mdl,X_tr);
-      RSLT_tr=p>T(optIdx);
+    % Reluts with optimal threshold
+%     RSLT_tr=predict(mdl,X_tr);
+    RSLT_tr=p>T(optIdx);
       
-      % Results for train set with optimal threshold
-      [TP_tr(iteration),TN_tr(iteration),FP_tr(iteration),FN_tr(iteration),...
-        ACC_tr(iteration),PPV_tr(iteration),TPR_tr(iteration),SPC_tr(iteration),...
-        FPR_tr(iteration),F1_tr(iteration),SS_tr(iteration)]=estBinClass(Y_tr,RSLT_tr);
+    % Results for train set with optimal threshold
+    [TP_tr(iteration),TN_tr(iteration),FP_tr(iteration),FN_tr(iteration),...
+      ACC_tr(iteration),PPV_tr(iteration),TPR_tr(iteration),SPC_tr(iteration),...
+      FPR_tr(iteration),F1_tr(iteration),SS_tr(iteration)]=estBinClass(Y_tr,RSLT_tr);
       
-      % Obtaining results for CV set
+    % Obtaining results for CV set
+    if (strcmpi(classifierName,'nbayes'))      
+      p=posterior(mdl,X_cv);
+      p=p(:,2);
+    elseif (strcmpi(classifierName,'logit'))
+      p=predict(mdl,X_cv);      
+    elseif (strcmpi(classifierName,'svm'))
+      [~,p]=predict(mdl,X_cv);
+      p=p(:,2);      
+    elseif (strcmpi(classifierName,'tree'))
+      [~,p]=predict(mdl,X_cv);
+      p=p(:,2);      
+    elseif (strcmpi(classifierName,'knn'))
       [~,p]=predict(mdl,X_cv);
       p=p(:,2);
+    elseif (strcmpi(classifierName,'discr'))
+      [~,p]=predict(mdl,X_cv);
+      p=p(:,2);      
+    end  
       
-      % Performance curves on CV data
-      [TP_th_cv(:,iteration),TN_th_cv(:,iteration),FP_th_cv(:,iteration),FN_th_cv(:,iteration),...
-        ACC_th_cv(:,iteration),PPV_th_cv(:,iteration),TPR_th_cv(:,iteration),SPC_th_cv(:,iteration),...
-        FPR_th_cv(:,iteration),F1_th_cv(:,iteration),SS_th_cv(:,iteration),AUC_cv(iteration)]=...
-        perfCurvesTh(Y_cv,p,T,1);
+    % Performance curves on CV data
+    [TP_th_cv(:,iteration),TN_th_cv(:,iteration),FP_th_cv(:,iteration),FN_th_cv(:,iteration),...
+      ACC_th_cv(:,iteration),PPV_th_cv(:,iteration),TPR_th_cv(:,iteration),SPC_th_cv(:,iteration),...
+      FPR_th_cv(:,iteration),F1_th_cv(:,iteration),SS_th_cv(:,iteration),AUC_cv(iteration)]=...
+      perfCurvesTh(Y_cv,p,T,1);
       
-      % Interpolating FRP to average ROCs
-      FPR_ROC_cv(:,iteration)=0:1/(nOfThresholds-1):1;
-      [fpr,idxSort]=sort(FPR_cv(:,iteration));
-      tpr=TPR_cv(idxSort,iteration);
-      TPR_ROC_cv(:,iteration)=interp1q(fpr,tpr,FPR_ROC_cv(:,iteration));
-      
-      % Selecting optimal threshold based on SS-score
-      [~,optIdx]=max(SS_cv(:,iteration));
-      TH_cv(iteration)=T(optIdx);
-      
-      % Reluts with optimal threshold
-%       RSLT_cv=predict(mdl,X_cv);
-      RSLT_cv=p>T(optIdx);
-      
-      % Results for CV set with optimal threshold
-      [TP_cv(iteration),TN_cv(iteration),FP_cv(iteration),FN_cv(iteration),...
-        ACC_cv(iteration),PPV_cv(iteration),TPR_cv(iteration),SPC_cv(iteration),...
-        FPR_cv(iteration),F1_cv(iteration),SS_cv(iteration)]=estBinClass(Y_cv,RSLT_cv);
+    % Interpolating FRP to average ROCs
+    FPR_ROC_cv(:,iteration)=0:1/(nOfThresholds-1):1;
+    [fpr,idxSort]=sort(FPR_th_cv(:,iteration));
+    tpr=TPR_th_cv(idxSort,iteration);
+    TPR_ROC_cv(:,iteration)=interp1q(fpr,tpr,FPR_ROC_cv(:,iteration));
 
-      % Obtaining results for Test set
+    % Selecting optimal threshold based on SS-score
+    [~,optIdx]=max(SS_cv(:,iteration));
+    TH_cv(iteration)=T(optIdx);
+
+    % Reluts with optimal threshold
+%     RSLT_cv=predict(mdl,X_cv);
+    RSLT_cv=p>T(optIdx);
+      
+    % Results for CV set with optimal threshold
+    [TP_cv(iteration),TN_cv(iteration),FP_cv(iteration),FN_cv(iteration),...
+      ACC_cv(iteration),PPV_cv(iteration),TPR_cv(iteration),SPC_cv(iteration),...
+      FPR_cv(iteration),F1_cv(iteration),SS_cv(iteration)]=estBinClass(Y_cv,RSLT_cv);
+
+    % Obtaining results for Test set
+    if (strcmpi(classifierName,'nbayes'))      
+      p=posterior(mdl,X_ts);
+      p=p(:,2);
+    elseif (strcmpi(classifierName,'logit'))
+      p=predict(mdl,X_ts);      
+    elseif (strcmpi(classifierName,'svm'))
+      [~,p]=predict(mdl,X_ts);
+      p=p(:,2);      
+    elseif (strcmpi(classifierName,'tree'))
+      [~,p]=predict(mdl,X_ts);
+      p=p(:,2);      
+    elseif (strcmpi(classifierName,'knn'))
       [~,p]=predict(mdl,X_ts);
       p=p(:,2);
-      
-      % Performance curves on train data
-      [TP_th_ts(:,iteration),TN_th_ts(:,iteration),FP_th_ts(:,iteration),FN_th_ts(:,iteration),...
-        ACC_th_ts(:,iteration),PPV_th_ts(:,iteration),TPR_th_ts(:,iteration),SPC_th_ts(:,iteration),...
-        FPR_th_ts(:,iteration),F1_th_ts(:,iteration),SS_th_ts(:,iteration),AUC_ts(iteration)]=...
-        perfCurvesTh(Y_ts,p,T,1);
-      
-      % Interpolating FRP to average ROCs
-      FPR_ROC_ts(:,iteration)=0:1/(nOfThresholds-1):1;
-      [fpr,idxSort]=sort(FPR_ts(:,iteration));
-      tpr=TPR_ts(idxSort,iteration);
-      TPR_ROC_ts(:,iteration)=interp1q(fpr,tpr,FPR_ROC_ts(:,iteration));
-      
-      % Selecting optimal threshold based on SS-score
-      [~,optIdx]=max(SS_ts(:,iteration));
-      TH_ts(iteration)=T(optIdx);
-      
-      % Reluts with optimal threshold
-%       RSLT_ts=predict(mdl,X_ts);
-      RSLT_ts=p>T(optIdx);
-
-      % Results for CV set with optimal threshold
-      [TP_ts(iteration),TN_ts(iteration),FP_ts(iteration),FN_ts(iteration),...
-        ACC_ts(iteration),PPV_ts(iteration),TPR_ts(iteration),SPC_ts(iteration),...
-        FPR_ts(iteration),F1_ts(iteration),SS_ts(iteration)]=estBinClass(Y_ts,RSLT_ts);
-    else
-      error(['No approriate classification method ',classifierName,'!']);
+    elseif (strcmpi(classifierName,'discr'))
+      [~,p]=predict(mdl,X_ts);
+      p=p(:,2);      
     end
+      
+    % Performance curves on train data
+    [TP_th_ts(:,iteration),TN_th_ts(:,iteration),FP_th_ts(:,iteration),FN_th_ts(:,iteration),...
+      ACC_th_ts(:,iteration),PPV_th_ts(:,iteration),TPR_th_ts(:,iteration),SPC_th_ts(:,iteration),...
+      FPR_th_ts(:,iteration),F1_th_ts(:,iteration),SS_th_ts(:,iteration),AUC_ts(iteration)]=...
+      perfCurvesTh(Y_ts,p,T,1);
+
+    % Interpolating FRP to average ROCs
+    FPR_ROC_ts(:,iteration)=0:1/(nOfThresholds-1):1;
+    [fpr,idxSort]=sort(FPR_th_ts(:,iteration));
+    tpr=TPR_th_ts(idxSort,iteration);
+    TPR_ROC_ts(:,iteration)=interp1q(fpr,tpr,FPR_ROC_ts(:,iteration));
+
+    % Selecting optimal threshold based on SS-score
+    [~,optIdx]=max(SS_ts(:,iteration));
+    TH_ts(iteration)=T(optIdx);
+      
+    % Reluts with optimal threshold
+%     RSLT_ts=predict(mdl,X_ts);
+    RSLT_ts=p>T(optIdx);
+
+    % Results for CV set with optimal threshold
+    [TP_ts(iteration),TN_ts(iteration),FP_ts(iteration),FN_ts(iteration),...
+      ACC_ts(iteration),PPV_ts(iteration),TPR_ts(iteration),SPC_ts(iteration),...
+      FPR_ts(iteration),F1_ts(iteration),SS_ts(iteration)]=estBinClass(Y_ts,RSLT_ts);  
   end
   
   % Mean and std data over iterations (train)

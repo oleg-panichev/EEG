@@ -13,6 +13,12 @@ function predictPreictal(propertiesFunction)
   end
   
   % Load feature list and choose same features for all patients
+  fNamesStr=[];
+  for fListIdx=1:numel(fList)
+    fNamesStr=[fNamesStr,fList{fListIdx},','];
+  end
+  fNamesStr=fNamesStr(1:end-1); % List of used features
+  
   fNamesList=cell(numel(sigId),numel(fList));
   for sigIdx=1:numel(signalsWorkList.id)
     tic;
@@ -45,7 +51,8 @@ function predictPreictal(propertiesFunction)
   X=[];
   tBeforeSz=[];
   tAfterSz=[];
-  PID=[];
+  SID=[];
+  sigList=[];
   for sigIdx=1:numel(signalsWorkList.id)
     tic;
     disp(signalsWorkList.mat_address{sigIdx});
@@ -59,35 +66,56 @@ function predictPreictal(propertiesFunction)
           X=[X;s.x(:,fIdxMatrices{fIdx}(sigIdx,:))];
           tBeforeSz=[tBeforeSz,s.tBeforeSz];
           tAfterSz=[tAfterSz,s.tAfterSz];
-          PID=[PID,ones(size(tBeforeSz))*signalsWorkList.id{sigIdx}];
+          SID=[SID,ones(size(tBeforeSz))*signalsWorkList.id(sigIdx)];
         end
       otherwise
         warning(['There are np aproriate method to process signals of ',...
           'type ',signalsWorkList.sigType(sigIdx),'! Signal with ID = ',...
           num2str(signalsWorkList.id(sigIdx)),' has been skipped.']);
     end
+    sigList=[sigList,',',num2str(signalsWorkList.id(sigIdx))];
     t=toc;
     disp(['Elapsed time: ',num2str(t),'s']);
   end
-  
-  size(X)
-  size(tBeforeSz)
-  size(tAfterSz)
+  sigList=sigList(2:end);
   
   % Form Y using tBeforeSz and tAfterSz
-  yIdx=tBeforeSz>5 & tAfterSz>120;
+  yIdx=tBeforeSz>earlyDetection & tAfterSz>afterSzStart;
   tbsz=tBeforeSz(yIdx);
   tasz=tAfterSz(yIdx);
   X=X(yIdx,:);
-  PID=PID(yIdx);
-  Y=tbsz<600;
+  SID=SID(yIdx)';
+  Y=tbsz<preictalTime;
+  Y=Y';
   
   % Run classification
-  results=cell(numel(classifierNames),1);
+	disp('Classifying...');
   for classIdx=1:numel(classifierNames)
-    results{classIdx}=runClassification(propertiesFunction,X,Y,classifierNames{classIdx});
-  end
+    tic;
+    disp(classifierNames{classIdx});
+    R=runNonPatSpecificClassification(propertiesFunction,X,Y,SID,classifierNames{classIdx});
+    
+    
+    t=cell(1,2);
+    t{1,1}=classifierNames{classIdx};
+    t{2,1}=['Number of iterations: ',num2str(nOfIterations)];
+    t{3,1}=['Signals IDs: ',sigList];
+    t=cell2table(t);
   
-  % Save results to report tables
+    resultsTable=table(R.TH_tr_av,R.PPV_tr_av,R.TPR_tr_av,R.SPC_tr_av,R.FPR_tr_av,R.F1_tr_av,R.SS_tr_av,R.AUC_tr_av,...
+      R.TH_cv_av,R.PPV_cv_av,R.TPR_cv_av,R.SPC_cv_av,R.FPR_cv_av,R.F1_cv_av,R.SS_cv_av,R.AUC_cv_av,... 
+      R.TH_ts_av,R.PPV_ts_av,R.TPR_ts_av,R.SPC_ts_av,R.FPR_ts_av,R.F1_ts_av,R.SS_ts_av,R.AUC_ts_av,...
+      'RowNames',{fNamesStr},'VariableNames',{'TH_tr','PPV_tr','TPR_tr','SPC_tr','FPR_tr','F1_tr','SS_tr','AUC_tr',...
+      'TH_cv','PPV_cv','TPR_cv','SPC_cv','FPR_cv','F1_cv','SS_cv','AUC_cv',...
+      'TH_ts','PPV_ts','TPR_ts','SPC_ts','FPR_ts','F1_ts','SS_ts','AUC_ts'});
+
+    writetable(t,[repLocation,'classification_results.xlsx'],'Sheet',classIdx,...
+      'WriteRowNames',false,'WriteVariableNames',false,'Range','A1');
+    writetable(resultsTable,[repLocation,'classification_results.xlsx'],'Sheet',classIdx,...
+      'WriteRowNames',true,'Range','A3');
+    
+    t=toc;
+    disp(['Elapsed time: ',num2str(t),'s']);
+  end
   
 end
