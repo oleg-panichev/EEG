@@ -6,8 +6,8 @@ function [features,fNames,fTimes,fLabels]=prepareFeatures(propertiesFunction,s)
   fIdx=1;
 
   % Calculating features
-  winSize=30; % Seconds
-  stepSize=winSize/2; % Seconds
+  winSize=corrcWinSize; % Seconds
+  stepSize=corrcStepSize; % Seconds
   [corrc,corrc_mean,corrc_std,corrc_fLabels,corrc_mean_fLabels,...
     corrc_std_fLabels,tBuf]=f_corrBetweenChannels(s.data,fs,...
     winSize*fs,stepSize*fs,s.channels);

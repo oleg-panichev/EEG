@@ -1,10 +1,13 @@
-function [X_tr,X_cv,X_ts,Y_tr,Y_cv,Y_ts,SID_tr,SID_cv,SID_ts]=divideDataOnTrainCvTest(X,Y,SID)  
+function [X_tr,X_cv,X_ts,Y_tr,Y_cv,Y_ts,SID_tr,SID_cv,SID_ts]=divideDataOnTrainCvTest(X,Y,SID,mode)  
 
   IDX_POS=(Y==1);
   IDX_NEG=(Y==0);
-  N=numel(Y);
   N_POS=sum(IDX_POS);
-  N_NEG=sum(IDX_NEG);
+  if (strcmp(mode,'normal'))
+    N_NEG=sum(IDX_NEG);
+  elseif (strcmp(mode,'balanced'))
+    N_NEG=N_POS;
+  end
   
   % Divide data on two classes
   X_POS=X(IDX_POS,:);
@@ -16,23 +19,24 @@ function [X_tr,X_cv,X_ts,Y_tr,Y_cv,Y_ts,SID_tr,SID_cv,SID_ts]=divideDataOnTrainC
   
   % Form random data permutation
   rIdx_POS=randperm(N_POS);
-  rIdx_NEG=randperm(N_NEG);
+  rIdx_NEG=randperm(sum(IDX_NEG));
+  if (strcmp(mode,'balanced'))
+    rIdx_NEG=rIdx_NEG(1:N_NEG);
+  end
   
   % 60/20/20
   N_tr_POS=round(0.6*N_POS);
   N_tr_NEG=round(0.6*N_NEG);
   N_cv_POS=round(0.2*N_POS);
   N_cv_NEG=round(0.2*N_NEG);
-  N_ts_POS=N_POS-N_tr_POS-N_cv_POS;
-  N_ts_NEG=N_NEG-N_tr_NEG-N_cv_NEG;
   
   % Getting indexes of three datasets
   rIdx_tr_POS=rIdx_POS(1:N_tr_POS);
   rIdx_tr_NEG=rIdx_NEG(1:N_tr_NEG);
-  rIdx_cv_POS=rIdx_POS(N_tr_POS+1:N_cv_POS);
-  rIdx_cv_NEG=rIdx_NEG(N_tr_NEG+1:N_cv_NEG);
-  rIdx_ts_POS=rIdx_POS(N_cv_POS+1:end);
-  rIdx_ts_NEG=rIdx_NEG(N_cv_NEG+1:end);
+  rIdx_cv_POS=rIdx_POS(N_tr_POS+1:N_tr_POS+N_cv_POS);
+  rIdx_cv_NEG=rIdx_NEG(N_tr_NEG+1:N_tr_NEG+N_cv_NEG);
+  rIdx_ts_POS=rIdx_POS(N_tr_POS+N_cv_POS+1:end);
+  rIdx_ts_NEG=rIdx_NEG(N_tr_NEG+N_cv_NEG+1:end);
   
   % Train Set
   X_tr=[X_POS(rIdx_tr_POS,:);X_NEG(rIdx_tr_NEG,:)];

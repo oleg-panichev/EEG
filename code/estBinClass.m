@@ -21,6 +21,15 @@ function [TP,TN,FP,FN,ACC,PPV,TPR,SPC,FPR,F1,SS]=estBinClass(Y,result)
   TPR=TP/(TP+FN);
   SPC=TN/(FP+TN);
   FPR=FP/(FP+TN);
-  F1=2*PPV*TPR/(PPV+TPR);
-  SS=2*SPC*TPR/(SPC+TPR);
+  
+  if (PPV==0 || TPR==0)
+    F1=0;
+  else
+    F1=2*PPV*TPR/(PPV+TPR);
+  end
+  if (SPC==0 || TPR==0)
+    SS=0;
+  else
+    SS=2*SPC*TPR/(SPC+TPR);
+  end
 end

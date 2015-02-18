@@ -1,61 +1,59 @@
-function plotROCs(classifierNames,patBuf,ROCs,ROCsWght,T,TWght,fNamesStr)
-  run('processingProperties.m');
+function fig=plotROCs(propertiesFunction,R)
+  propertiesFunction();
   clNum=numel(classifierNames);
 
+  sigList=[];
+  for sigIdx=1:numel(signalsWorkList.id)
+    sigList=[sigList,',',num2str(signalsWorkList.id(sigIdx))];
+  end
+  sigList=sigList(2:end);
+  fNamesStr=[];
+  for fListIdx=1:numel(fList)
+    fNamesStr=[fNamesStr,fList{fListIdx},','];
+  end
+  fNamesStr=fNamesStr(1:end-1); % List of used features
+  
   colors=[0 0 1; 1 0 0; 0 1 0; 1 0.75 0; 1 0 1; 0 1 1];
   fig=figure;
   set(fig,'PaperPositionMode','auto');
-  set(fig,'Position',[0 100 1300 600]);
+  set(fig,'Position',[0 100 1300 400]);
   set(fig,'DefaultAxesLooseInset',[0,0.1,0,0]);
-  avAUC=zeros(clNum,1);
-  avAUCWght=zeros(clNum,1);
+  
+  subplot(1,3,1);
   leg=[classifierNames,'0.5'];
-  legWght=[classifierNames,'0.5'];
   for i=1:clNum
-    avAUC(i)=mean(T{i}.AUC);
-    leg{i}=[leg{i},', AUC=',num2str(avAUC(i))];
-    avAUCWght(i)=mean(TWght{i}.AUC);
-    legWght{i}=[legWght{i},', AUC=',num2str(avAUCWght(i))];
-  end
-  for patIdx=1:numel(patBuf)
-    subplot(2,4,patIdx);
-    for i=1:clNum
-      if (numel(ROCs{i,1}{patIdx,1})>0)
-        plot(ROCs{i,1}{patIdx,1}(:,1),ROCs{i,1}{patIdx,1}(:,2), ...
-          'Color',colors(i,:),'Linewidth',2); hold on;      
-      end
-    end
-    plot(0:0.1:1,0:0.1:1,'--','Color',[0 0 0]);  
-    if (patIdx==1)
-      legend(leg,'Location','SouthEast');
-    end
-    title(patBuf{patIdx}); 
-    xlabel('FPR'); ylabel('TPR'); grid on;
-  end
-  suptitle([fNamesStr;'Train/Test = 60/40%, Not weighted data']);
-  pause;
-  savePlot2File(fig,'png',reportPath,'Classification_results');
+    plot(R(i).FPR_ROC_tr,R(i).TPR_ROC_tr, ...
+      'Color',colors(i,:),'Linewidth',2); hold on;    
+    leg{i}=[leg{i},', AUC=',num2str(R(i).AUC_tr_av)];
+  end  
+  plot(0:0.1:1,0:0.1:1,'--','Color',[0 0 0]);  
+  legend(leg,'Location','SouthEast');
+  title('ROC Train'); xlabel('FPR'); ylabel('TPR'); grid on;
+  
+  subplot(1,3,2);
+  leg=[classifierNames,'0.5'];
+  for i=1:clNum
+    plot(R(i).FPR_ROC_cv,R(i).TPR_ROC_cv, ...
+      'Color',colors(i,:),'Linewidth',2); hold on;    
+    leg{i}=[leg{i},', AUC=',num2str(R(i).AUC_cv_av)];
+  end  
+  plot(0:0.1:1,0:0.1:1,'--','Color',[0 0 0]);  
+  legend(leg,'Location','SouthEast');
+  title('ROC CV'); xlabel('FPR'); ylabel('TPR'); grid on;
+  
+  subplot(1,3,3);
+  leg=[classifierNames,'0.5'];
+  for i=1:clNum
+    plot(R(i).FPR_ROC_ts,R(i).TPR_ROC_ts, ...
+      'Color',colors(i,:),'Linewidth',2); hold on;    
+    leg{i}=[leg{i},', AUC=',num2str(R(i).AUC_ts_av)];
+  end  
+  plot(0:0.1:1,0:0.1:1,'--','Color',[0 0 0]);  
+  legend(leg,'Location','SouthEast');
+  title('ROC Test'); xlabel('FPR'); ylabel('TPR'); grid on;
 
-  fig=figure;
-  set(fig,'PaperPositionMode','auto');
-  set(fig,'Position',[0 100 1300 600]);
-  set(fig,'DefaultAxesLooseInset',[0,0.1,0,0]);
-  for patIdx=1:numel(patBuf)
-    subplot(2,4,patIdx);
-    for i=1:clNum
-      if (numel(ROCsWght{i,1}{patIdx,1})>0)
-        plot(ROCsWght{i,1}{patIdx,1}(:,1),ROCsWght{i,1}{patIdx,1}(:,2), ...
-          'Color',colors(i,:),'Linewidth',2); hold on;      
-      end
-    end
-    plot(0:0.1:1,0:0.1:1,'--','Color',[0 0 0]);  
-    if (patIdx==1)
-      legend(leg,'Location','SouthEast');
-    end
-    title(patBuf{patIdx}); 
-    xlabel('FPR'); ylabel('TPR'); grid on;
-  end
-  suptitle('Train/Test = 60/40%, Weighted data');
-  pause;
-  savePlot2File(fig,'png',reportPath,'Classification_results_wght');
+  ttl=suptitle({fNamesStr;['Signal IDs: ',sigList,', PI length: ',...
+    num2str(preictalTime),', Train/CV/Test: 60/20/20%']});
+  set(ttl,'Interpreter','none','Fontsize',10);
+  legend(leg,'Location','SouthEast'); 
 end

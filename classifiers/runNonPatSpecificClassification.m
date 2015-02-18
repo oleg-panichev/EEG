@@ -94,7 +94,7 @@ function S=runNonPatSpecificClassification(propertiesFunction,X,Y,SID,classifier
   for iteration=1:nOfIterations
     % Split data on train, cv and test sets
     [X_tr,X_cv,X_ts,Y_tr,Y_cv,Y_ts,~,~,~]=...
-      divideDataOnTrainCvTest(X,Y,SID);
+      divideDataOnTrainCvTest(X,Y,SID,divideTrainCvTestMode);
     
     % Train model
     if (strcmpi(classifierName,'nbayes'))      
@@ -127,7 +127,8 @@ function S=runNonPatSpecificClassification(propertiesFunction,X,Y,SID,classifier
       p=p(:,2);      
       [T]=getThresholds([0 1],nOfThresholds);
     end
-      
+    T(nOfThresholds)=T(nOfThresholds)+0.0001;
+    
     % Performance curves on train data
     [TP_th_tr(:,iteration),TN_th_tr(:,iteration),FP_th_tr(:,iteration),FN_th_tr(:,iteration),...
       ACC_th_tr(:,iteration),PPV_th_tr(:,iteration),TPR_th_tr(:,iteration),SPC_th_tr(:,iteration),...
@@ -137,16 +138,20 @@ function S=runNonPatSpecificClassification(propertiesFunction,X,Y,SID,classifier
     % Interpolating FRP to average ROCs
     FPR_ROC_tr(:,iteration)=0:1/(nOfThresholds-1):1;
     [fpr,idxSort]=sort(FPR_th_tr(:,iteration));
-    tpr=TPR_th_tr(idxSort,iteration);
-    TPR_ROC_tr(:,iteration)=interp1q(fpr,tpr,FPR_ROC_tr(:,iteration));
+    if AUC_tr(iteration)==1
+      TPR_ROC_tr(:,iteration)=[0;ones(nOfThresholds-1,1)];
+    else
+      tpr=TPR_th_tr(idxSort,iteration);
+      TPR_ROC_tr(:,iteration)=interp1q(fpr,tpr,FPR_ROC_tr(:,iteration));
+    end
       
     % Selecting optimal threshold based on SS-score
-    [~,optIdx]=max(SS_tr(:,iteration));
+    [~,optIdx]=max(SS_th_tr(:,iteration));
     TH_tr(iteration)=T(optIdx);
       
     % Reluts with optimal threshold
 %     RSLT_tr=predict(mdl,X_tr);
-    RSLT_tr=p>T(optIdx);
+    RSLT_tr=p>=T(optIdx);
       
     % Results for train set with optimal threshold
     [TP_tr(iteration),TN_tr(iteration),FP_tr(iteration),FN_tr(iteration),...
@@ -162,12 +167,16 @@ function S=runNonPatSpecificClassification(propertiesFunction,X,Y,SID,classifier
     elseif (strcmpi(classifierName,'svm'))
       [~,p]=predict(mdl,X_cv);
       p=p(:,2);      
+      [T]=getThresholds(p,nOfThresholds);
+      T(nOfThresholds)=T(nOfThresholds)+0.0001;
     elseif (strcmpi(classifierName,'tree'))
       [~,p]=predict(mdl,X_cv);
       p=p(:,2);      
     elseif (strcmpi(classifierName,'knn'))
       [~,p]=predict(mdl,X_cv);
       p=p(:,2);
+      [T]=getThresholds(p,nOfThresholds);
+      T(nOfThresholds)=T(nOfThresholds)+0.0001;
     elseif (strcmpi(classifierName,'discr'))
       [~,p]=predict(mdl,X_cv);
       p=p(:,2);      
@@ -186,12 +195,12 @@ function S=runNonPatSpecificClassification(propertiesFunction,X,Y,SID,classifier
     TPR_ROC_cv(:,iteration)=interp1q(fpr,tpr,FPR_ROC_cv(:,iteration));
 
     % Selecting optimal threshold based on SS-score
-    [~,optIdx]=max(SS_cv(:,iteration));
+    [~,optIdx]=max(SS_th_cv(:,iteration));
     TH_cv(iteration)=T(optIdx);
 
     % Reluts with optimal threshold
 %     RSLT_cv=predict(mdl,X_cv);
-    RSLT_cv=p>T(optIdx);
+    RSLT_cv=p>=TH_tr(iteration);
       
     % Results for CV set with optimal threshold
     [TP_cv(iteration),TN_cv(iteration),FP_cv(iteration),FN_cv(iteration),...
@@ -206,13 +215,17 @@ function S=runNonPatSpecificClassification(propertiesFunction,X,Y,SID,classifier
       p=predict(mdl,X_ts);      
     elseif (strcmpi(classifierName,'svm'))
       [~,p]=predict(mdl,X_ts);
-      p=p(:,2);      
+      p=p(:,2);   
+      [T]=getThresholds(p,nOfThresholds);
+      T(nOfThresholds)=T(nOfThresholds)+0.0001;
     elseif (strcmpi(classifierName,'tree'))
       [~,p]=predict(mdl,X_ts);
       p=p(:,2);      
     elseif (strcmpi(classifierName,'knn'))
       [~,p]=predict(mdl,X_ts);
       p=p(:,2);
+      [T]=getThresholds(p,nOfThresholds);
+      T(nOfThresholds)=T(nOfThresholds)+0.0001;
     elseif (strcmpi(classifierName,'discr'))
       [~,p]=predict(mdl,X_ts);
       p=p(:,2);      
@@ -231,12 +244,12 @@ function S=runNonPatSpecificClassification(propertiesFunction,X,Y,SID,classifier
     TPR_ROC_ts(:,iteration)=interp1q(fpr,tpr,FPR_ROC_ts(:,iteration));
 
     % Selecting optimal threshold based on SS-score
-    [~,optIdx]=max(SS_ts(:,iteration));
+    [~,optIdx]=max(SS_th_ts(:,iteration));
     TH_ts(iteration)=T(optIdx);
       
     % Reluts with optimal threshold
 %     RSLT_ts=predict(mdl,X_ts);
-    RSLT_ts=p>T(optIdx);
+    RSLT_ts=p>=TH_tr(iteration);
 
     % Results for CV set with optimal threshold
     [TP_ts(iteration),TN_ts(iteration),FP_ts(iteration),FN_ts(iteration),...

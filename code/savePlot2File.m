@@ -8,5 +8,8 @@
 %   
 function savePlot2File(fig,fileFormat,filePath,fileName)
   set(fig,'Visible','On');
+  if (~exist(filePath,'dir'))
+    mkdir(filePath);
+  end
   saveas(fig,[filePath,fileName,'.',fileFormat],fileFormat);
 end
