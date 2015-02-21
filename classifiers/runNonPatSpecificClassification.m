@@ -94,7 +94,7 @@ function S=runNonPatSpecificClassification(propertiesFunction,X,Y,SID,classifier
   for iteration=1:nOfIterations
     % Split data on train, cv and test sets
     [X_tr,X_cv,X_ts,Y_tr,Y_cv,Y_ts,~,~,~]=...
-      divideDataOnTrainCvTest(X,Y,SID,divideTrainCvTestMode);
+      divideDataOnTrainCvTest(propertiesFunction,X,Y,SID,divideTrainCvTestMode);
     
     % Train model
     if (strcmpi(classifierName,'nbayes'))      

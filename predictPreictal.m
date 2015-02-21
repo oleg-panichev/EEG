@@ -80,6 +80,7 @@ function predictPreictal(propertiesFunction)
   SID=SID(yIdx)';
   Y=tbsz<preictalTime;
   Y=Y';
+  disp(['Number of observations: "',num2str(numel(Y))]);
   
   % Run classification
 	disp('Classifying...');
@@ -88,6 +89,7 @@ function predictPreictal(propertiesFunction)
     tic;
     disp(classifierNames{classIdx});
     R=runNonPatSpecificClassification(propertiesFunction,X,Y,SID,classifierNames{classIdx});
+    disp(['Mean CV AUC: ',num2str(R.AUC_cv_av)]);
     
     % Selecting sheet in XLS file
     for sheetIdx=1:numel(allClassifierNames)
