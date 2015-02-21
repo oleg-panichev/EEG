@@ -1,4 +1,5 @@
 figure
-plot(rand(1,1e5));
+plot(rand(1,1e5)); hold on;
+plot(randn(1,1e5));
 title('blablalb');
 grid on;
