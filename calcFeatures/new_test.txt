@@ -1,0 +1,2 @@
+figure
+plot(rand(1,1e3))
