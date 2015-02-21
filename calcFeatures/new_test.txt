@@ -2,3 +2,4 @@ figure
 plot(rand(1,1e5));
 title('blablalb');
 grid on;
+xlabel('XXX')
