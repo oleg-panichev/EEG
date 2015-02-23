@@ -8,7 +8,7 @@ function calcFeatures(propertiesFunction)
 
   % Prepare dirs for features
   if (~exist(ftLocation,'dir'))
-    mkdir(featuresLocation);
+    mkdir(ftLocation);
   end
 
   % Run feature calculation

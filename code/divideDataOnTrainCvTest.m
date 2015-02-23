@@ -56,6 +56,70 @@ function [X_tr,X_cv,X_ts,Y_tr,Y_cv,Y_ts,SID_tr,SID_cv,SID_ts]=...
     Y_ts=[Y_POS(rIdx_ts_POS);Y_NEG(rIdx_ts_NEG)];
     SID_ts=[SID_POS(rIdx_ts_POS);SID_NEG(rIdx_ts_NEG)];
   else
+    % Train Set
+    [Lia,~]=ismember(SID,trainSID);
+    X_tr=X(Lia,:);
+    Y_tr=Y(Lia);
+    SID_tr=SID(Lia);
+    if (strcmp(mode,'balanced'))
+      N_POS=sum(Y_tr~=0);
+      N_NEG=sum(Y_tr==0);
+      rIdx=randperm(N_NEG);
+      
+      X_tr_POS=X_tr(Y_tr~=0,:);     
+      X_tr_NEG=X_tr(Y_tr==0,:);
+      Y_tr_POS=Y_tr(Y_tr~=0);
+      Y_tr_NEG=Y_tr(Y_tr==0);
+      SID_tr_POS=SID_tr(Y_tr~=0);
+      SID_tr_NEG=SID_tr(Y_tr==0);
+      
+      X_tr=[X_tr_POS;X_tr_NEG(rIdx(1:N_POS),:)];
+      Y_tr=[Y_tr_POS;Y_tr_NEG(rIdx(1:N_POS))];
+      SID_tr=[SID_tr_POS;SID_tr_NEG(rIdx(1:N_POS))];
+    end
     
+    % CV set
+    [Lia,~]=ismember(SID,cvSID);
+    X_cv=X(Lia,:);
+    Y_cv=Y(Lia);
+    SID_cv=SID(Lia);
+    if (strcmp(mode,'balanced'))
+      N_POS=sum(Y_cv~=0);
+      N_NEG=sum(Y_cv==0);
+      rIdx=randperm(N_NEG);
+      
+      X_cv_POS=X_cv(Y_cv~=0,:);     
+      X_cv_NEG=X_cv(Y_cv==0,:);
+      Y_cv_POS=Y_cv(Y_cv~=0);
+      Y_cv_NEG=Y_cv(Y_cv==0);
+      SID_cv_POS=SID_cv(Y_cv~=0);
+      SID_cv_NEG=SID_cv(Y_cv==0);
+      
+      X_cv=[X_cv_POS;X_cv_NEG(rIdx(1:N_POS),:)];
+      Y_cv=[Y_cv_POS;Y_cv_NEG(rIdx(1:N_POS))];
+      SID_cv=[SID_cv_POS;SID_cv_NEG(rIdx(1:N_POS))];
+    end
+    
+    % Test set
+    [Lia,~]=ismember(SID,tsSID);
+    X_ts=X(Lia,:);
+    Y_ts=Y(Lia);
+    SID_ts=SID(Lia);
+    if (strcmp(mode,'balanced'))
+      N_POS=sum(Y_ts~=0);
+      N_NEG=sum(Y_ts==0);
+      rIdx=randperm(N_NEG);
+      
+      X_ts_POS=X_ts(Y_ts~=0,:);     
+      X_ts_NEG=X_ts(Y_ts==0,:);
+      Y_ts_POS=Y_ts(Y_ts~=0);
+      Y_ts_NEG=Y_ts(Y_ts==0);
+      SID_ts_POS=SID_ts(Y_ts~=0);
+      SID_ts_NEG=SID_ts(Y_ts==0);
+      
+      X_ts=[X_ts_POS;X_ts_NEG(rIdx(1:N_POS),:)];
+      Y_ts=[Y_ts_POS;Y_ts_NEG(rIdx(1:N_POS))];
+      SID_ts=[SID_ts_POS;SID_ts_NEG(rIdx(1:N_POS))];
+    end
   end
 end

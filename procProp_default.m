@@ -10,7 +10,7 @@ repLocation='D:/eeg_db/reports/'; % Folder name to store the results
 signalsList=SignalsList([dbLocation,signalsListFname]);
 
 %% Construct list of signals to process
-sigId=[1:9];
+sigId=[1:6,8:10,13:16];
 signalsWorkList=signalsList.getSubListById(sigId).getTable; % Get list if signals by ID
 
 %% Features list to use in classification
@@ -26,10 +26,10 @@ clResultNumber=1;
 
 %% Features calculation parameters:
 % Correlation between EEG channels features:
-corrcWinSize=30; % Seconds
+corrcWinSize=40; % Seconds
 corrcStepSize=corrcWinSize/2; % Seconds
-if corrcStepSize>1
-  corrcStepSize=1;
+if corrcStepSize>2
+  corrcStepSize=2;
 end
   
 %% Classification parameters:

@@ -132,4 +132,7 @@ function predictPreictal(propertiesFunction)
   fig=plotROCs(propertiesFunction,results);
   savePlot2File(fig,'png',repLocation,'Classification_results');
   savePlot2File(fig,'fig',repLocation,'Classification_results'); 
+  
+  % Save results
+  save([repLocation,'/',fNamesStr,'.mat'],'results');
 end
