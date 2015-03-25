@@ -6,7 +6,7 @@ function [X_tr,X_cv,X_ts,Y_tr,Y_cv,Y_ts,SID_tr,SID_cv,SID_ts]=...
     IDX_POS=(Y==1);
     IDX_NEG=(Y==0);
     N_POS=sum(IDX_POS);
-    if (strcmp(mode,'normal'))
+    if (strcmp(mode,'all'))
       N_NEG=sum(IDX_NEG);
     elseif (strcmp(mode,'balanced'))
       N_NEG=N_POS;
@@ -101,7 +101,7 @@ function [X_tr,X_cv,X_ts,Y_tr,Y_cv,Y_ts,SID_tr,SID_cv,SID_ts]=...
     end
     
     % Test set
-    [Lia,~]=ismember(SID,tsSID);
+    [Lia,~]=ismember(SID,testSID);
     X_ts=X(Lia,:);
     Y_ts=Y(Lia);
     SID_ts=SID(Lia);

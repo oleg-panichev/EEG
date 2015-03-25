@@ -21,23 +21,26 @@ function predictPreictal(propertiesFunction)
   end
   fNamesStr=fNamesStr(1:end-1); % List of used features
   
-  fNamesList=cell(numel(sigId),numel(fList));
+  fNamesList=cell(numel(sigId),1);%numel(fList));
   for sigIdx=1:numel(signalsWorkList.id)
     switch signalsWorkList.sigType{sigIdx}
       case 'aes_spc'
 
       case 'mat_zhukov'    
         dir2open=[ftLocation,signalsWorkList.mat_address{sigIdx}(1:end-4),'/'];
+        tempList={};
         for fIdx=1:numel(fList)
           s=load([dir2open,fList{fIdx}],'fLabels');
-          fNamesList{sigIdx,fIdx}=s.fLabels;
+          tempList=[tempList;s.fLabels];
         end
+        fNamesList{sigIdx}=tempList;
       otherwise
         warning(['There are np aproriate method to process signals of ',...
           'type ',signalsWorkList.sigType(sigIdx),'! Signal with ID = ',...
           num2str(signalsWorkList.id(sigIdx)),' has been skipped.']);
     end
   end
+  fNamesList
   fIdxMatrices=selectSameFeatures(fNamesList);
   
   % Load all features in one buffer
@@ -53,13 +56,15 @@ function predictPreictal(propertiesFunction)
 
       case 'mat_zhukov'    
         dir2open=[ftLocation,signalsWorkList.mat_address{sigIdx}(1:end-4),'/'];
+        sigX=[];
         for fIdx=1:numel(fList)
           s=load([dir2open,fList{fIdx}]);
-          X=[X;s.x(:,fIdxMatrices{fIdx}(sigIdx,:))];
-          tBeforeSz=[tBeforeSz,s.tBeforeSz];
-          tAfterSz=[tAfterSz,s.tAfterSz];
-          SID=[SID,ones(size(tBeforeSz))*signalsWorkList.id(sigIdx)];
+          sigX=[sigX,s.x];
         end
+        X=[X;sigX(:,fIdxMatrices{1}(sigIdx,:))];
+        tBeforeSz=[tBeforeSz,s.tBeforeSz];
+        tAfterSz=[tAfterSz,s.tAfterSz];
+        SID=[SID,ones(size(s.tBeforeSz))*signalsWorkList.id(sigIdx)];
       otherwise
         warning(['There are np aproriate method to process signals of ',...
           'type ',signalsWorkList.sigType(sigIdx),'! Signal with ID = ',...
@@ -71,16 +76,49 @@ function predictPreictal(propertiesFunction)
   disp(['Number of features: ',num2str(size(X,2))]);
   t=toc;
   disp(['Elapsed time: ',num2str(t),'s']);
+  disp(['# observations: ',num2str(numel(SID))]);
   
   % Form Y using tBeforeSz and tAfterSz
   yIdx=tBeforeSz>earlyDetection & tAfterSz>afterSzStart;
   tbsz=tBeforeSz(yIdx);
-  tasz=tAfterSz(yIdx);
   X=X(yIdx,:);
   SID=SID(yIdx)';
-  Y=tbsz<preictalTime;
+  Y=tbsz<=preictalTime;
   Y=Y';
-  disp(['Number of observations: "',num2str(numel(Y))]);
+  disp(['# obs. after tSz: ',num2str(numel(Y))]);
+  
+  % Remove NaNs
+  nans=isnan(X);
+  idx=ones(size(X,1),1);
+  for i=1:size(X,1)
+    if sum(nans(i,:))>0
+      idx(i)=0;
+    end
+  end
+  idx=logical(idx);
+  X=X(idx,:);
+  Y=Y(idx);
+  SID=SID(idx);
+  disp(['# obs. after NaNs: ',num2str(numel(Y))]);
+  
+  % Get only a part to train
+%   N=numel(Y);
+%   randIdx=randperm(N);
+%   X=X(randIdx(1:round(N/64)),:);
+%   Y=Y(randIdx(1:round(N/64)));
+%   SID=SID(randIdx(1:round(N/64)));
+%   disp(['# obs. after cut: ',num2str(numel(Y))]);
+
+  c=zeros(size(X,2),size(X,2));
+  for i=1:size(X,2)
+    for j=1:size(X,2)
+      temp=corrcoef(X(:,i),X(:,j));
+      c(i,j)=temp(1,2);
+    end
+  end
+  figure
+  imagesc(c);
+  colorbar;
   
   % Run classification
 	disp('Classifying...');
@@ -89,7 +127,9 @@ function predictPreictal(propertiesFunction)
     tic;
     disp(classifierNames{classIdx});
     R=runNonPatSpecificClassification(propertiesFunction,X,Y,SID,classifierNames{classIdx});
+    disp(['Mean Train AUC: ',num2str(R.AUC_tr_av)]);
     disp(['Mean CV AUC: ',num2str(R.AUC_cv_av)]);
+    disp(['Mean Test AUC: ',num2str(R.AUC_ts_av)]);
     
     % Selecting sheet in XLS file
     for sheetIdx=1:numel(allClassifierNames)
@@ -135,4 +175,9 @@ function predictPreictal(propertiesFunction)
   
   % Save results
   save([repLocation,'/',fNamesStr,'.mat'],'results');
+  
+  finishTime=clock;
+  disp(['Done ',num2str(finishTime(1)),'.',num2str(finishTime(2)),'.',...
+    num2str(finishTime(3)),' at ',num2str(finishTime(4)),':',...
+    num2str(finishTime(5)),':',num2str(finishTime(6))]);
 end

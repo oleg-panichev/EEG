@@ -33,4 +33,9 @@ function calcFeatures(propertiesFunction)
     t=toc;
     disp(['Elapsed time: ',num2str(t),'s']);
   end
+  
+  finishTime=clock;
+  disp(['Done ',num2str(finishTime(1)),'.',num2str(finishTime(2)),'.',...
+    num2str(finishTime(3)),' at ',num2str(finishTime(4)),':',...
+    num2str(finishTime(5)),':',num2str(finishTime(6))]);
 end

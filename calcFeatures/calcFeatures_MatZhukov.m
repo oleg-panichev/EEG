@@ -5,6 +5,11 @@ function calcFeatures_MatZhukov(propertiesFunction,fname,dir2save)
   % Load data from file
   sdata=load(fname);
   
+  % Check if there are structure in a structure
+  if numel(fieldnames(sdata))==1
+    sdata=sdata.d;
+  end
+  
   % Store needed values in struct
   dataSize=size(sdata.data);
   if (dataSize(1)>dataSize(2))

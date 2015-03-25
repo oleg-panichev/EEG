@@ -99,7 +99,7 @@ function S=runNonPatSpecificClassification(propertiesFunction,X,Y,SID,classifier
     % Train model
     if (strcmpi(classifierName,'nbayes'))      
       mdl=fitNaiveBayes(X_tr,Y_tr);
-      p=posterior(mdl,X_tr);
+      p=posterior(mdl,double(X_tr));
       p=p(:,2);     
       [T]=getThresholds([0 1],nOfThresholds);
     elseif (strcmpi(classifierName,'logit'))
@@ -148,6 +148,22 @@ function S=runNonPatSpecificClassification(propertiesFunction,X,Y,SID,classifier
     % Selecting optimal threshold based on SS-score
     [~,optIdx]=max(SS_th_tr(:,iteration));
     TH_tr(iteration)=T(optIdx);
+%     TH_tr(iteration)
+%     
+%     figure
+%     subplot(2,1,1);
+%     hist(p(Y_tr==0),100); hold on;
+%     ylim=get(gca,'YLim');
+%     line([TH_tr(iteration) TH_tr(iteration)],ylim,'Color',[1 0 0]);
+%     title('p(Y_tr==0)');
+%     grid on;
+%     subplot(2,1,2);
+%     hist(p(Y_tr==1),100); hold on;
+%     ylim=get(gca,'YLim');
+%     line([TH_tr(iteration) TH_tr(iteration)],ylim,'Color',[1 0 0]);
+%     title('p(Y_tr==1');
+%     grid on;
+%     suptitle([classifierName,', Train']);
       
     % Reluts with optimal threshold
 %     RSLT_tr=predict(mdl,X_tr);
@@ -230,6 +246,21 @@ function S=runNonPatSpecificClassification(propertiesFunction,X,Y,SID,classifier
       [~,p]=predict(mdl,X_ts);
       p=p(:,2);      
     end
+
+%     figure
+%     subplot(2,1,1);
+%     hist(p(Y_ts==0),100); hold on;
+%     ylim=get(gca,'YLim');
+%     line([TH_tr(iteration) TH_tr(iteration)],ylim,'Color',[1 0 0]);
+%     title('p(Y_ts==0)');
+%     grid on;
+%     subplot(2,1,2);
+%     hist(p(Y_ts==1),100); hold on;
+%     ylim=get(gca,'YLim');
+%     line([TH_tr(iteration) TH_tr(iteration)],ylim,'Color',[1 0 0]);
+%     title('p(Y_ts==1)');
+%     grid on;
+%     suptitle([classifierName,', Test']);
       
     % Performance curves on train data
     [TP_th_ts(:,iteration),TN_th_ts(:,iteration),FP_th_ts(:,iteration),FN_th_ts(:,iteration),...
